@@ -70,7 +70,7 @@ async function sendSlackNotification(
     `🏆 *En tête : ${leader[0]}* avec ${leader[1]} vote${leader[1] > 1 ? 's' : ''}`,
   ].join('\n');
 
-  await fetch('https://slack.com/api/chat.postMessage', {
+  const slackRes = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${slackToken}`,
@@ -78,6 +78,10 @@ async function sendSlackNotification(
     },
     body: JSON.stringify({ channel: channelId, text }),
   });
+  const slackData = await slackRes.json();
+  if (!slackData.ok) {
+    console.error('Slack API error:', slackData);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -162,10 +166,12 @@ export async function POST(request: NextRequest) {
       } as Parameters<Client['pages']['create']>[0]['properties'],
     });
 
-    // Send Slack notification (non-blocking)
-    sendSlackNotification(notion, resultsDbId, voterName?.trim() || 'Anonyme', conceptLabel).catch((e: unknown) =>
-      console.error('Slack notification error:', e)
-    );
+    // Send Slack notification
+    try {
+      await sendSlackNotification(notion, resultsDbId, voterName?.trim() || 'Anonyme', conceptLabel);
+    } catch (e) {
+      console.error('Slack notification error:', e);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
