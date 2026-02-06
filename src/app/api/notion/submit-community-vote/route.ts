@@ -11,6 +11,75 @@ interface RequestBody {
   siteUrl?: string;
 }
 
+async function sendSlackNotification(
+  notion: Client,
+  resultsDbId: string,
+  voterName: string,
+  conceptLabel: string,
+) {
+  const slackToken = process.env.SLACK_BOT_TOKEN;
+  const channelId = process.env.SLACK_CHANNEL_ID;
+  if (!slackToken || !channelId) return;
+
+  // Query all community votes from the Results DB to build a tally
+  const resultsDb = await notion.databases.retrieve({ database_id: resultsDbId });
+  if (!('data_sources' in resultsDb) || !resultsDb.data_sources?.length) return;
+
+  const dsId = resultsDb.data_sources[0].id;
+  const allRows = await notion.dataSources.query({ data_source_id: dsId, page_size: 100 });
+
+  // Count votes per design (from "1er choix" column)
+  const tally: Record<string, number> = {};
+  let totalVotes = 0;
+
+  for (const row of allRows.results) {
+    if (!('properties' in row)) continue;
+    const props = row.properties as Record<string, Record<string, unknown>>;
+    const choiceProp = props['1er choix'];
+    if (choiceProp && 'rich_text' in choiceProp) {
+      const text = (choiceProp.rich_text as Array<{ plain_text: string }>)
+        .map((t) => t.plain_text).join('').trim();
+      if (text) {
+        // Extract just "Option X" from "Option A - Rotation + Présence"
+        const optionMatch = text.match(/^(Option [A-F])/);
+        const key = optionMatch ? optionMatch[1] : text;
+        tally[key] = (tally[key] || 0) + 1;
+        totalVotes++;
+      }
+    }
+  }
+
+  // Sort by votes descending
+  const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+  const leader = sorted[0];
+
+  // Build tally lines
+  const tallyLines = sorted.map(([design, count]) => {
+    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+    const bar = '█'.repeat(Math.round(pct / 5)) + '░'.repeat(20 - Math.round(pct / 5));
+    return `${design}: ${bar} ${count} vote${count > 1 ? 's' : ''} (${pct}%)`;
+  }).join('\n');
+
+  const text = [
+    `🗳️ *Nouveau vote !*`,
+    `*${voterName}* a voté pour *${conceptLabel}*`,
+    ``,
+    `📊 *Classement en temps réel* (${totalVotes} vote${totalVotes > 1 ? 's' : ''})`,
+    tallyLines,
+    ``,
+    `🏆 *En tête : ${leader[0]}* avec ${leader[1]} vote${leader[1] > 1 ? 's' : ''}`,
+  ].join('\n');
+
+  await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${slackToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ channel: channelId, text }),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.NOTION_API_KEY;
@@ -92,6 +161,11 @@ export async function POST(request: NextRequest) {
         } : {}),
       } as Parameters<Client['pages']['create']>[0]['properties'],
     });
+
+    // Send Slack notification (non-blocking)
+    sendSlackNotification(notion, resultsDbId, voterName?.trim() || 'Anonyme', conceptLabel).catch((e: unknown) =>
+      console.error('Slack notification error:', e)
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {
