@@ -434,7 +434,7 @@ export default function GeneratePage() {
                 <div key={concept.id} className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium ${isCurrent ? 'text-slate-500' : 'text-slate-300'}`}>
-                      {letter}. {concept.name}
+                      Option {letter}
                     </span>
                     {isCurrent && (
                       <span className="px-1.5 py-0.5 bg-slate-600 text-slate-400 text-[10px] font-medium rounded">actuel</span>

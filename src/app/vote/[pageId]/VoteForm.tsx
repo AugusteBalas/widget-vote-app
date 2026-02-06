@@ -282,7 +282,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                   )}
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1">
-                  {letter ? `${letter}. ` : ''}{design.description}
+                  {letter ? `Option ${letter}` : design.description}
                 </h3>
               </div>
             );
@@ -351,7 +351,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                 <div key={design.pageId} className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
-                      {letter ? `${letter}. ` : ''}{design.description}
+                      {letter ? `Option ${letter}` : design.description}
                     </span>
                     {isCurrent && (
                       <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">
@@ -459,7 +459,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                     )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
-                        {letter ? `${letter}. ` : ''}{design.description}
+                        {letter ? `Option ${letter}` : design.description}
                       </h3>
                     </div>
                   </div>
