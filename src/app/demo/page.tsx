@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { CONCEPTS, ConceptId, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
+import { CONCEPTS, ConceptId, CONCEPT_LETTER, isCurrentWidget, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
 import { extractDominantColor, getFaviconUrl } from '@/lib/colorExtractor';
 import WidgetButton from '@/components/WidgetButton';
 import ViaSayLogo from '@/components/ViaSayLogo';
 
 const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> = {
-  B:  { name: 'Rotation + Présence', description: 'Logo inversé avec point vert de présence' },
-  B2: { name: 'Rotation + Badge', description: 'Logo inversé avec badge de notification' },
-  D:  { name: 'Symétrie + Présence', description: 'Logo symétrique avec point vert de présence' },
-  D2: { name: 'Symétrie + Badge', description: 'Logo symétrique avec badge de notification' },
+  B:  { name: 'Nouveau + Présence', description: 'Nouveau logo avec point vert de présence' },
+  B2: { name: 'Nouveau + Badge', description: 'Nouveau logo avec badge de notification' },
+  D:  { name: 'Nouveau + Présence', description: 'Nouveau logo symétrique avec point vert' },
+  D2: { name: 'Nouveau + Badge', description: 'Nouveau logo symétrique avec badge' },
   OLD: { name: 'Actuel + Présence', description: 'Widget actuel avec point vert de présence' },
   OLD2: { name: 'Actuel + Badge', description: 'Widget actuel avec badge de notification' },
 };
@@ -86,8 +86,7 @@ export default function DemoPage() {
     setVoteError(null);
 
     try {
-      const concept = CONCEPTS.find(c => c.id === selectedConcept)!;
-      const label = `Option ${concept.id} - ${concept.name}`;
+      const label = `Option ${CONCEPT_LETTER[selectedConcept]} - ${CONCEPT_LABELS[selectedConcept].name}`;
 
       const response = await fetch('/api/notion/submit-community-vote', {
         method: 'POST',
@@ -157,21 +156,32 @@ export default function DemoPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {CONCEPTS.map((concept) => {
             const meta = CONCEPT_LABELS[concept.id];
+            const letter = CONCEPT_LETTER[concept.id];
+            const isCurrent = isCurrentWidget(concept.id);
             return (
               <div
                 key={concept.id}
-                className="relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow"
+                className={`relative rounded-2xl border p-4 sm:p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow ${
+                  isCurrent
+                    ? 'bg-slate-50 border-slate-300 border-dashed'
+                    : 'bg-white border-slate-200'
+                }`}
               >
+                {isCurrent && (
+                  <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">
+                    actuel
+                  </span>
+                )}
                 <div className="my-6 sm:my-8">
                   <WidgetButton
                     concept={concept.id}
-                    buttonColor={DEFAULT_BUTTON_COLOR}
+                    buttonColor={isCurrent ? '#636480' : DEFAULT_BUTTON_COLOR}
                     presenceColor={DEFAULT_PRESENCE_COLOR}
                     size={72}
                   />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1">
-                  {meta.name}
+                  {letter}. {meta.name}
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                   {meta.description}
@@ -270,15 +280,21 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {CONCEPTS.map((concept) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {CONCEPTS.map((concept) => {
+                  const letter = CONCEPT_LETTER[concept.id];
+                  const isCurrent = isCurrentWidget(concept.id);
+                  return (
                   <div key={concept.id} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-700">
-                        {CONCEPT_LABELS[concept.id].name}
+                      <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
+                        {letter}. {CONCEPT_LABELS[concept.id].name}
                       </span>
+                      {isCurrent && (
+                        <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
+                      )}
                     </div>
-                    <div className="relative aspect-video bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                    <div className={`relative aspect-video bg-white rounded-xl overflow-hidden border shadow-sm ${isCurrent ? 'border-slate-300 border-dashed' : 'border-slate-200'}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={screenshotUrl}
@@ -288,17 +304,18 @@ export default function DemoPage() {
                       <div className="absolute bottom-2 right-2">
                         <WidgetButton
                           concept={concept.id}
-                          buttonColor={buttonColor}
+                          buttonColor={isCurrent ? '#636480' : buttonColor}
                           presenceColor={presenceColor}
                           size={36}
                         />
                       </div>
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm rounded text-xs font-bold text-white">
-                        {concept.id}
+                      <div className={`absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/50'}`}>
+                        {letter}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="text-center">
@@ -336,14 +353,16 @@ export default function DemoPage() {
                 Votez pour votre prefere
               </h2>
               <p className="text-slate-500">
-                Selectionnez le concept que vous preferez parmi les 5 propositions
+                Selectionnez le concept que vous preferez parmi les 6 propositions
               </p>
             </div>
 
             {/* Vote cards */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               {CONCEPTS.map((concept) => {
                 const isSelected = selectedConcept === concept.id;
+                const letter = CONCEPT_LETTER[concept.id];
+                const isCurrent = isCurrentWidget(concept.id);
                 return (
                   <div
                     key={concept.id}
@@ -354,9 +373,14 @@ export default function DemoPage() {
                     className={`relative p-4 sm:p-6 rounded-2xl border-2 transition-all text-left cursor-pointer ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/10'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                        : isCurrent
+                          ? 'border-slate-300 border-dashed bg-slate-50 hover:border-slate-400 hover:shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                     }`}
                   >
+                    {isCurrent && (
+                      <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
+                    )}
                     <div className="flex items-center gap-3 mb-3">
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -371,13 +395,13 @@ export default function DemoPage() {
                       </div>
                       <WidgetButton
                         concept={concept.id}
-                        buttonColor={DEFAULT_BUTTON_COLOR}
+                        buttonColor={isCurrent ? '#636480' : DEFAULT_BUTTON_COLOR}
                         presenceColor={DEFAULT_PRESENCE_COLOR}
                         size={40}
                       />
                     </div>
                     <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                      {CONCEPT_LABELS[concept.id].name}
+                      {letter}. {CONCEPT_LABELS[concept.id].name}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 hidden sm:block">
                       {CONCEPT_LABELS[concept.id].description}
@@ -433,7 +457,7 @@ export default function DemoPage() {
               Merci pour votre vote !
             </h2>
             <p className="text-slate-500 mb-2">
-              Vous avez vote pour <span className="font-semibold text-slate-700">{CONCEPT_LABELS[selectedConcept!].name}</span>
+              Vous avez vote pour <span className="font-semibold text-slate-700">{CONCEPT_LETTER[selectedConcept!]}. {CONCEPT_LABELS[selectedConcept!].name}</span>
             </p>
             <p className="text-sm text-slate-400">
               Votre avis nous aide a choisir le meilleur design pour notre widget.

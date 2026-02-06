@@ -76,6 +76,10 @@ const LABELS: Record<Lang, {
   },
 };
 
+const CONCEPT_LETTERS: Record<string, string> = {
+  B: 'A', B2: 'B', D: 'C', D2: 'D', OLD: 'E', OLD2: 'F',
+};
+
 const CONCEPT_META: Record<string, { name: Record<Lang, string>; description: Record<Lang, string>; recommended?: boolean }> = {
   B: {
     name:        { fr: 'Rotation + Présence', en: 'Rotation + Presence', es: 'Rotación + Presencia' },
@@ -215,9 +219,10 @@ export async function POST(request: NextRequest) {
       const upload = uploadedFiles.find((f) => f.conceptId === conceptId);
       if (!meta) continue;
 
+      const letter = CONCEPT_LETTERS[conceptId] || conceptId;
       const designName = meta.recommended
-        ? `Option ${conceptId} - ${meta.name[lang]} ⭐`
-        : `Option ${conceptId} - ${meta.name[lang]}`;
+        ? `Option ${letter} - ${meta.name[lang]} ⭐`
+        : `Option ${letter} - ${meta.name[lang]}`;
 
       const properties: Record<string, unknown> = {
         Design: {

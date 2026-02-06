@@ -53,5 +53,20 @@ export const CONCEPTS: ConceptInfo[] = [
   },
 ];
 
+// Display letter for each concept (used in UI labels)
+export const CONCEPT_LETTER: Record<ConceptId, string> = {
+  B: 'A',
+  B2: 'B',
+  D: 'C',
+  D2: 'D',
+  OLD: 'E',
+  OLD2: 'F',
+};
+
+// Whether a concept is the "current" widget (vs new design)
+export function isCurrentWidget(concept: ConceptId): boolean {
+  return concept === 'OLD' || concept === 'OLD2';
+}
+
 export const DEFAULT_BUTTON_COLOR = '#4A90D9';
 export const DEFAULT_PRESENCE_COLOR = '#22c55e';

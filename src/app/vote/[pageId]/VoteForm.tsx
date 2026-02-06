@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import WidgetButton from '@/components/WidgetButton';
-import { DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
+import { DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR, CONCEPT_LETTER, isCurrentWidget } from '@/lib/types';
 import ViaSayLogo from '@/components/ViaSayLogo';
 
 interface Design {
@@ -103,9 +103,21 @@ const UI_TEXT = {
   },
 };
 
+// Letter-to-concept mapping (new format: "Option A", "Option B", etc.)
+const LETTER_TO_CONCEPT: Record<string, 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2'> = {
+  A: 'B', B: 'B2', C: 'D', D: 'D2', E: 'OLD', F: 'OLD2',
+};
+
 // Map design titles to concept IDs for WidgetButton
+// Supports both old format ("Option B - ...") and new format ("Option A - ...")
 function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2' | null {
-  // Check OLD2 before OLD (same logic as B2 before B)
+  // New letter format: "Option A - ...", "Option B - ...", etc.
+  const letterMatch = title.match(/^Option ([A-F])\b/);
+  if (letterMatch) {
+    const mapped = LETTER_TO_CONCEPT[letterMatch[1]];
+    if (mapped) return mapped;
+  }
+  // Legacy format: internal IDs in the title
   if (/\bOLD2\b/i.test(title)) return 'OLD2';
   if (/\bOLD\b/i.test(title)) return 'OLD';
   const match = title.match(/\b(B2|D2|B|D)\b/);
@@ -241,16 +253,27 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {data.designs.map((design) => {
             const conceptId = extractConceptId(design.title);
+            const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
+            const isCurrent = conceptId ? isCurrentWidget(conceptId) : false;
             return (
               <div
                 key={design.pageId}
-                className="relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow"
+                className={`relative rounded-2xl border p-4 sm:p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow ${
+                  isCurrent
+                    ? 'bg-slate-50 border-slate-300 border-dashed'
+                    : 'bg-white border-slate-200'
+                }`}
               >
+                {isCurrent && (
+                  <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">
+                    {data.lang === 'en' ? 'current' : data.lang === 'es' ? 'actual' : 'actuel'}
+                  </span>
+                )}
                 <div className="my-6 sm:my-8">
                   {conceptId ? (
                     <WidgetButton
                       concept={conceptId}
-                      buttonColor={buttonColor}
+                      buttonColor={isCurrent ? '#636480' : buttonColor}
                       presenceColor={DEFAULT_PRESENCE_COLOR}
                       size={72}
                     />
@@ -259,11 +282,8 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                   )}
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1">
-                  {design.title}
+                  {letter ? `${letter}. ` : ''}{design.description}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  {design.description}
-                </p>
               </div>
             );
           })}
@@ -325,14 +345,21 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.designs.map((design) => {
               const conceptId = extractConceptId(design.title);
+              const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
+              const isCurrent = conceptId ? isCurrentWidget(conceptId) : false;
               return (
                 <div key={design.pageId} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700">
-                      {design.title}
+                    <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
+                      {letter ? `${letter}. ` : ''}{design.description}
                     </span>
+                    {isCurrent && (
+                      <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">
+                        {data.lang === 'en' ? 'current' : data.lang === 'es' ? 'actual' : 'actuel'}
+                      </span>
+                    )}
                   </div>
-                  <div className="relative aspect-video bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                  <div className={`relative aspect-video bg-white rounded-xl overflow-hidden border shadow-sm ${isCurrent ? 'border-slate-300 border-dashed' : 'border-slate-200'}`}>
                     {design.imageUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -349,14 +376,14 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                       <div className="absolute bottom-2 right-2">
                         <WidgetButton
                           concept={conceptId}
-                          buttonColor={buttonColor}
+                          buttonColor={isCurrent ? '#636480' : buttonColor}
                           presenceColor={DEFAULT_PRESENCE_COLOR}
                           size={36}
                         />
                       </div>
                     )}
-                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm rounded text-xs font-bold text-white">
-                      {conceptId || '?'}
+                    <div className={`absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/50'}`}>
+                      {letter || '?'}
                     </div>
                   </div>
                 </div>
@@ -402,6 +429,8 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
             {data.designs.map((design) => {
               const currentRank = rankings[design.pageId] || '';
               const conceptId = extractConceptId(design.title);
+              const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
+              const isCurrent = conceptId ? isCurrentWidget(conceptId) : false;
 
               return (
                 <div
@@ -409,25 +438,29 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
                   className={`relative p-4 sm:p-5 rounded-2xl border-2 transition-all ${
                     currentRank
                       ? 'border-blue-400 bg-blue-50 shadow-lg shadow-blue-100'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                      : isCurrent
+                        ? 'border-slate-300 border-dashed bg-slate-50 hover:border-slate-400 hover:shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                   }`}
                 >
+                  {isCurrent && !currentRank && (
+                    <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">
+                      {data.lang === 'en' ? 'current' : data.lang === 'es' ? 'actual' : 'actuel'}
+                    </span>
+                  )}
                   <div className="flex items-center gap-3 mb-3">
                     {conceptId && (
                       <WidgetButton
                         concept={conceptId}
-                        buttonColor={buttonColor}
+                        buttonColor={isCurrent ? '#636480' : buttonColor}
                         presenceColor={DEFAULT_PRESENCE_COLOR}
                         size={40}
                       />
                     )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
-                        {design.title}
+                        {letter ? `${letter}. ` : ''}{design.description}
                       </h3>
-                      <p className="text-xs text-slate-500 hidden sm:block">
-                        {design.description}
-                      </p>
                     </div>
                   </div>
 

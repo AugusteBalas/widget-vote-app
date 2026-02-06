@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
-import { CONCEPTS, ConceptId, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
+import { CONCEPTS, ConceptId, CONCEPT_LETTER, isCurrentWidget, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
 import { extractDominantColor, getFaviconUrl } from '@/lib/colorExtractor';
 import WidgetButton from '@/components/WidgetButton';
 import ColorPicker from '@/components/ColorPicker';
@@ -427,12 +427,18 @@ export default function GeneratePage() {
 
             {/* Preview Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {CONCEPTS.map((concept) => (
+              {CONCEPTS.map((concept) => {
+                const letter = CONCEPT_LETTER[concept.id];
+                const isCurrent = isCurrentWidget(concept.id);
+                return (
                 <div key={concept.id} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-300">
-                      {concept.name} ({concept.id})
+                    <span className={`text-sm font-medium ${isCurrent ? 'text-slate-500' : 'text-slate-300'}`}>
+                      {letter}. {concept.name}
                     </span>
+                    {isCurrent && (
+                      <span className="px-1.5 py-0.5 bg-slate-600 text-slate-400 text-[10px] font-medium rounded">actuel</span>
+                    )}
                     {concept.recommended && (
                       <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
                         ⭐ Recommandé
@@ -441,7 +447,7 @@ export default function GeneratePage() {
                   </div>
                   <div
                     ref={(el) => { previewRefs.current[concept.id] = el; }}
-                    className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border border-slate-700"
+                    className={`relative aspect-video bg-slate-900 rounded-xl overflow-hidden border ${isCurrent ? 'border-slate-600 border-dashed' : 'border-slate-700'}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -457,12 +463,13 @@ export default function GeneratePage() {
                         size={48}
                       />
                     </div>
-                    <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-xs font-bold text-white">
-                      {concept.id}
+                    <div className={`absolute top-2 left-2 px-2 py-1 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/60'}`}>
+                      {letter}
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Publish Button */}
