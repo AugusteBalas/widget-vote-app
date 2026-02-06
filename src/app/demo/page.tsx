@@ -7,10 +7,10 @@ import WidgetButton from '@/components/WidgetButton';
 import ViaSayLogo from '@/components/ViaSayLogo';
 
 const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> = {
-  B:  { name: 'Option B - Classique', description: 'Rotation 180° avec point de présence' },
-  B2: { name: 'Option B2 - Notification', description: 'Rotation 180° avec badge de notification' },
-  D:  { name: 'Option D - Symétrie Verticale', description: 'Pill en haut, cercle en bas avec point de présence' },
-  D2: { name: 'Option D2 - Symétrie + Notification', description: 'Symétrie verticale avec badge de notification' },
+  B:  { name: 'Rotation + Présence', description: 'Logo inversé avec point vert de présence' },
+  B2: { name: 'Rotation + Badge', description: 'Logo inversé avec badge de notification' },
+  D:  { name: 'Symétrie + Présence', description: 'Logo symétrique avec point vert de présence' },
+  D2: { name: 'Symétrie + Badge', description: 'Logo symétrique avec badge de notification' },
 };
 
 export default function DemoPage() {
@@ -230,6 +230,7 @@ export default function DemoPage() {
             {siteError && (
               <p className="mt-2 text-sm text-red-500">{siteError}</p>
             )}
+            <p className="mt-2 text-xs text-slate-400 text-center">Certains sites peuvent bloquer la capture automatique</p>
           </div>
 
           {/* Preview grid */}

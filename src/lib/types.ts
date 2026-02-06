@@ -17,26 +17,26 @@ export interface ConceptInfo {
 export const CONCEPTS: ConceptInfo[] = [
   {
     id: 'B',
-    name: 'Classique',
-    description: 'Rotation 180° avec point de presence',
+    name: 'Rotation + Presence',
+    description: 'Logo inverse avec point vert de presence',
     hasIntegratedPresence: false,
   },
   {
     id: 'B2',
-    name: 'Notification',
-    description: 'Rotation 180° avec badge de notification',
+    name: 'Rotation + Badge',
+    description: 'Logo inverse avec badge de notification',
     hasIntegratedPresence: false,
   },
   {
     id: 'D',
-    name: 'Symetrie Verticale',
-    description: 'Pill en haut, cercle en bas avec point de presence',
+    name: 'Symetrie + Presence',
+    description: 'Logo symetrique avec point vert de presence',
     hasIntegratedPresence: false,
   },
   {
     id: 'D2',
-    name: 'Symetrie + Notification',
-    description: 'Symetrie verticale avec badge de notification',
+    name: 'Symetrie + Badge',
+    description: 'Logo symetrique avec badge de notification',
     hasIntegratedPresence: false,
   },
 ];

@@ -78,20 +78,20 @@ const LABELS: Record<Lang, {
 
 const CONCEPT_META: Record<string, { name: Record<Lang, string>; description: Record<Lang, string>; recommended?: boolean }> = {
   B: {
-    name:        { fr: 'Classique', en: 'Classic', es: 'Clásico' },
-    description: { fr: 'Rotation 180° avec point de présence', en: '180° rotation with presence dot', es: 'Rotación 180° con punto de presencia' },
+    name:        { fr: 'Rotation + Présence', en: 'Rotation + Presence', es: 'Rotación + Presencia' },
+    description: { fr: 'Logo inversé avec point vert de présence', en: 'Flipped logo with green presence dot', es: 'Logo invertido con punto verde de presencia' },
   },
   B2: {
-    name:        { fr: 'Notification', en: 'Notification', es: 'Notificación' },
-    description: { fr: 'Rotation 180° avec badge de notification', en: '180° rotation with notification badge', es: 'Rotación 180° con insignia de notificación' },
+    name:        { fr: 'Rotation + Badge', en: 'Rotation + Badge', es: 'Rotación + Badge' },
+    description: { fr: 'Logo inversé avec badge de notification', en: 'Flipped logo with notification badge', es: 'Logo invertido con insignia de notificación' },
   },
   D: {
-    name:        { fr: 'Symétrie Verticale', en: 'Vertical Symmetry', es: 'Simetría Vertical' },
-    description: { fr: 'Pill en haut, cercle en bas avec point de présence', en: 'Pill on top, circle at bottom with presence dot', es: 'Píldora arriba, círculo abajo con punto de presencia' },
+    name:        { fr: 'Symétrie + Présence', en: 'Symmetry + Presence', es: 'Simetría + Presencia' },
+    description: { fr: 'Logo symétrique avec point vert de présence', en: 'Symmetric logo with green presence dot', es: 'Logo simétrico con punto verde de presencia' },
   },
   D2: {
-    name:        { fr: 'Symétrie + Notification', en: 'Symmetry + Notification', es: 'Simetría + Notificación' },
-    description: { fr: 'Symétrie verticale avec badge de notification', en: 'Vertical symmetry with notification badge', es: 'Simetría vertical con insignia de notificación' },
+    name:        { fr: 'Symétrie + Badge', en: 'Symmetry + Badge', es: 'Simetría + Badge' },
+    description: { fr: 'Logo symétrique avec badge de notification', en: 'Symmetric logo with notification badge', es: 'Logo simétrico con insignia de notificación' },
   },
 };
 
