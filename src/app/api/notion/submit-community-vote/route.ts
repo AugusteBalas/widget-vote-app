@@ -74,7 +74,7 @@ async function sendSlackNotification(
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${slackToken}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
     },
     body: JSON.stringify({ channel: channelId, text }),
   });
