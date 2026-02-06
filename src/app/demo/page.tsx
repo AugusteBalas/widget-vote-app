@@ -7,10 +7,10 @@ import WidgetButton from '@/components/WidgetButton';
 import ViaSayLogo from '@/components/ViaSayLogo';
 
 const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> = {
-  B:  { name: 'Option B - Classique', description: 'Rotation 180° avec témoin de présence externe' },
-  B2: { name: 'Option B2 - Présence Intégrée', description: 'Le cercle du logo devient le témoin de présence' },
-  D:  { name: 'Option D - Symétrie Verticale', description: 'Pill en haut, cercle en bas avec témoin externe' },
-  D2: { name: 'Option D2 - Symétrie + Glow', description: 'Symétrie verticale avec cercle vert intégré' },
+  B:  { name: 'Option B - Classique', description: 'Rotation 180° avec point de présence' },
+  B2: { name: 'Option B2 - Notification', description: 'Rotation 180° avec badge de notification' },
+  D:  { name: 'Option D - Symétrie Verticale', description: 'Pill en haut, cercle en bas avec point de présence' },
+  D2: { name: 'Option D2 - Symétrie + Notification', description: 'Symétrie verticale avec badge de notification' },
 };
 
 export default function DemoPage() {

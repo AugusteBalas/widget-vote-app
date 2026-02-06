@@ -79,21 +79,19 @@ const LABELS: Record<Lang, {
 const CONCEPT_META: Record<string, { name: Record<Lang, string>; description: Record<Lang, string>; recommended?: boolean }> = {
   B: {
     name:        { fr: 'Classique', en: 'Classic', es: 'Clásico' },
-    description: { fr: 'Rotation 180° avec témoin de présence externe', en: '180° rotation with external presence indicator', es: 'Rotación 180° con indicador de presencia externo' },
+    description: { fr: 'Rotation 180° avec point de présence', en: '180° rotation with presence dot', es: 'Rotación 180° con punto de presencia' },
   },
   B2: {
-    name:        { fr: 'Présence Intégrée', en: 'Integrated Presence', es: 'Presencia Integrada' },
-    description: { fr: 'Le cercle du logo devient le témoin de présence', en: 'The logo circle becomes the presence indicator', es: 'El círculo del logo se convierte en el indicador de presencia' },
-    recommended: true,
+    name:        { fr: 'Notification', en: 'Notification', es: 'Notificación' },
+    description: { fr: 'Rotation 180° avec badge de notification', en: '180° rotation with notification badge', es: 'Rotación 180° con insignia de notificación' },
   },
   D: {
     name:        { fr: 'Symétrie Verticale', en: 'Vertical Symmetry', es: 'Simetría Vertical' },
-    description: { fr: 'Pill en haut, cercle en bas avec témoin externe', en: 'Pill on top, circle at bottom with external indicator', es: 'Píldora arriba, círculo abajo con indicador externo' },
+    description: { fr: 'Pill en haut, cercle en bas avec point de présence', en: 'Pill on top, circle at bottom with presence dot', es: 'Píldora arriba, círculo abajo con punto de presencia' },
   },
   D2: {
-    name:        { fr: 'Symétrie + Glow', en: 'Symmetry + Glow', es: 'Simetría + Glow' },
-    description: { fr: 'Symétrie verticale avec cercle vert intégré', en: 'Vertical symmetry with integrated green circle', es: 'Simetría vertical con círculo verde integrado' },
-    recommended: true,
+    name:        { fr: 'Symétrie + Notification', en: 'Symmetry + Notification', es: 'Simetría + Notificación' },
+    description: { fr: 'Symétrie verticale avec badge de notification', en: 'Vertical symmetry with notification badge', es: 'Simetría vertical con insignia de notificación' },
   },
 };
 

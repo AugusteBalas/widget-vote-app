@@ -19,15 +19,16 @@ export default function WidgetButton({
   size = 60,
   className = '',
 }: WidgetButtonProps) {
-  const hasIntegratedPresence = concept === 'B2' || concept === 'D2';
+  const hasNotificationBadge = concept === 'B2' || concept === 'D2';
   const isRotated = concept === 'B' || concept === 'B2';
 
   const pillPath = isRotated ? SVG_PATHS.pill.original : SVG_PATHS.pill.mirrored;
   const circlePath = isRotated ? SVG_PATHS.circle.original : SVG_PATHS.circle.mirrored;
 
-  const svgSize = size * 0.73; // SVG takes ~73% of button size
+  const svgSize = size * 0.73;
   const dotSize = size * 0.27;
-  const dotBorder = size * 0.05;
+  const badgeSize = size * 0.33;
+  const badgeFontSize = size * 0.2;
 
   return (
     <button
@@ -49,26 +50,18 @@ export default function WidgetButton({
         {isRotated ? (
           <g transform="rotate(180, 218, 280)">
             <path fill="white" d={pillPath} />
-            <path
-              fill={hasIntegratedPresence ? presenceColor : 'white'}
-              className={hasIntegratedPresence ? 'presence-integrated' : ''}
-              d={circlePath}
-            />
+            <path fill="white" d={circlePath} />
           </g>
         ) : (
           <>
             <path fill="white" d={pillPath} />
-            <path
-              fill={hasIntegratedPresence ? presenceColor : 'white'}
-              className={hasIntegratedPresence ? 'presence-integrated' : ''}
-              d={circlePath}
-            />
+            <path fill="white" d={circlePath} />
           </>
         )}
       </svg>
 
-      {/* External presence dot */}
-      {!hasIntegratedPresence && (
+      {/* Green presence dot (B and D only, no border) */}
+      {!hasNotificationBadge && (
         <span
           className="absolute presence-dot rounded-full"
           style={{
@@ -77,9 +70,30 @@ export default function WidgetButton({
             width: dotSize,
             height: dotSize,
             backgroundColor: presenceColor,
-            border: `${dotBorder}px solid ${buttonColor}`,
           }}
         />
+      )}
+
+      {/* Notification badge (B2 and D2) */}
+      {hasNotificationBadge && (
+        <span
+          className="absolute flex items-center justify-center"
+          style={{
+            top: -2,
+            right: -2,
+            width: badgeSize,
+            height: badgeSize,
+            backgroundColor: '#ef4444',
+            borderRadius: '50%',
+            fontSize: badgeFontSize,
+            fontWeight: 700,
+            color: 'white',
+            lineHeight: 1,
+            boxShadow: '0 2px 6px rgba(239, 68, 68, 0.5)',
+          }}
+        >
+          1
+        </span>
       )}
     </button>
   );

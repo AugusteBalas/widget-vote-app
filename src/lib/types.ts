@@ -18,28 +18,26 @@ export const CONCEPTS: ConceptInfo[] = [
   {
     id: 'B',
     name: 'Classique',
-    description: 'Rotation 180° avec temoin de presence externe',
+    description: 'Rotation 180° avec point de presence',
     hasIntegratedPresence: false,
   },
   {
     id: 'B2',
-    name: 'Presence Integree',
-    description: 'Le cercle du logo devient le temoin de presence',
-    hasIntegratedPresence: true,
-    recommended: true,
+    name: 'Notification',
+    description: 'Rotation 180° avec badge de notification',
+    hasIntegratedPresence: false,
   },
   {
     id: 'D',
     name: 'Symetrie Verticale',
-    description: 'Pill en haut, cercle en bas avec temoin externe',
+    description: 'Pill en haut, cercle en bas avec point de presence',
     hasIntegratedPresence: false,
   },
   {
     id: 'D2',
-    name: 'Symetrie + Glow',
-    description: 'Symetrie verticale avec cercle vert integre',
-    hasIntegratedPresence: true,
-    recommended: true,
+    name: 'Symetrie + Notification',
+    description: 'Symetrie verticale avec badge de notification',
+    hasIntegratedPresence: false,
   },
 ];
 

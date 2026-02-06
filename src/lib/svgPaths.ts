@@ -22,22 +22,17 @@ export function getConceptSVG(
   presenceColor: string,
   size: number = 44
 ): string {
-  const hasIntegratedPresence = concept === 'B2' || concept === 'D2';
   const isRotated = concept === 'B' || concept === 'B2';
 
   const pillPath = isRotated ? SVG_PATHS.pill.original : SVG_PATHS.pill.mirrored;
   const circlePath = isRotated ? SVG_PATHS.circle.original : SVG_PATHS.circle.mirrored;
-
-  const circleStyle = hasIntegratedPresence
-    ? `fill="${presenceColor}" class="presence-integrated"`
-    : 'fill="white"';
 
   const transform = isRotated ? 'transform="rotate(180, 218, 280)"' : '';
 
   return `<svg width="${size}" height="${size}" viewBox="${VIEWBOX}" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
     ${isRotated ? `<g ${transform}>` : ''}
       <path fill="white" d="${pillPath}"/>
-      <path ${circleStyle} d="${circlePath}"/>
+      <path fill="white" d="${circlePath}"/>
     ${isRotated ? '</g>' : ''}
   </svg>`;
 }
