@@ -19,56 +19,61 @@ async function sendSlackNotification(
 ) {
   const slackToken = process.env.SLACK_BOT_TOKEN;
   const channelId = process.env.SLACK_CHANNEL_ID;
-  if (!slackToken || !channelId) return;
-
-  // Query all community votes from the Results DB to build a tally
-  const resultsDb = await notion.databases.retrieve({ database_id: resultsDbId });
-  if (!('data_sources' in resultsDb) || !resultsDb.data_sources?.length) return;
-
-  const dsId = resultsDb.data_sources[0].id;
-  const allRows = await notion.dataSources.query({ data_source_id: dsId, page_size: 100 });
-
-  // Count votes per design (from "1er choix" column)
-  const tally: Record<string, number> = {};
-  let totalVotes = 0;
-
-  for (const row of allRows.results) {
-    if (!('properties' in row)) continue;
-    const props = row.properties as Record<string, Record<string, unknown>>;
-    const choiceProp = props['1er choix'];
-    if (choiceProp && 'rich_text' in choiceProp) {
-      const text = (choiceProp.rich_text as Array<{ plain_text: string }>)
-        .map((t) => t.plain_text).join('').trim();
-      if (text) {
-        // Extract just "Option X" from "Option A - Rotation + Présence"
-        const optionMatch = text.match(/^(Option [A-F])/);
-        const key = optionMatch ? optionMatch[1] : text;
-        tally[key] = (tally[key] || 0) + 1;
-        totalVotes++;
-      }
-    }
+  if (!slackToken || !channelId) {
+    console.error('[slack] Missing env vars:', { hasToken: !!slackToken, hasChannel: !!channelId });
+    return;
   }
 
-  // Sort by votes descending
-  const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]);
-  const leader = sorted[0];
+  // Try to build a tally, but send notification even if tally fails
+  let tallyText = '';
+  try {
+    const resultsDb = await notion.databases.retrieve({ database_id: resultsDbId });
+    if ('data_sources' in resultsDb && resultsDb.data_sources?.length) {
+      const dsId = resultsDb.data_sources[0].id;
+      const allRows = await notion.dataSources.query({ data_source_id: dsId, page_size: 100 });
 
-  // Build tally lines
-  const tallyLines = sorted.map(([design, count]) => {
-    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-    const bar = '█'.repeat(Math.round(pct / 5)) + '░'.repeat(20 - Math.round(pct / 5));
-    return `${design}: ${bar} ${count} vote${count > 1 ? 's' : ''} (${pct}%)`;
-  }).join('\n');
+      const tally: Record<string, number> = {};
+      let totalVotes = 0;
 
-  const text = [
-    `🗳️ *Nouveau vote !*`,
-    `*${voterName}* a voté pour *${conceptLabel}*`,
-    ``,
-    `📊 *Classement en temps réel* (${totalVotes} vote${totalVotes > 1 ? 's' : ''})`,
-    tallyLines,
-    ``,
-    `🏆 *En tête : ${leader[0]}* avec ${leader[1]} vote${leader[1] > 1 ? 's' : ''}`,
-  ].join('\n');
+      for (const row of allRows.results) {
+        if (!('properties' in row)) continue;
+        const props = row.properties as Record<string, Record<string, unknown>>;
+        const choiceProp = props['1er choix'];
+        if (choiceProp && 'rich_text' in choiceProp) {
+          const text = (choiceProp.rich_text as Array<{ plain_text: string }>)
+            .map((t) => t.plain_text).join('').trim();
+          if (text) {
+            const optionMatch = text.match(/^(Option [A-F])/);
+            const key = optionMatch ? optionMatch[1] : text;
+            tally[key] = (tally[key] || 0) + 1;
+            totalVotes++;
+          }
+        }
+      }
+
+      if (totalVotes > 0) {
+        const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+        const leader = sorted[0];
+        const tallyLines = sorted.map(([design, count]) => {
+          const pct = Math.round((count / totalVotes) * 100);
+          const bar = '█'.repeat(Math.round(pct / 5)) + '░'.repeat(20 - Math.round(pct / 5));
+          return `${design}: ${bar} ${count} vote${count > 1 ? 's' : ''} (${pct}%)`;
+        }).join('\n');
+
+        tallyText = [
+          ``,
+          `📊 *Classement en temps réel* (${totalVotes} vote${totalVotes > 1 ? 's' : ''})`,
+          tallyLines,
+          ``,
+          `🏆 *En tête : ${leader[0]}* avec ${leader[1]} vote${leader[1] > 1 ? 's' : ''}`,
+        ].join('\n');
+      }
+    }
+  } catch (e) {
+    console.error('[slack] Tally query failed (sending notification anyway):', e);
+  }
+
+  const text = `🗳️ *Nouveau vote !*\n*${voterName}* a voté pour *${conceptLabel}*${tallyText}`;
 
   const slackRes = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
@@ -79,9 +84,7 @@ async function sendSlackNotification(
     body: JSON.stringify({ channel: channelId, text }),
   });
   const slackData = await slackRes.json();
-  if (!slackData.ok) {
-    console.error('Slack API error:', slackData);
-  }
+  console.log('[slack] Response:', JSON.stringify(slackData));
 }
 
 export async function POST(request: NextRequest) {
