@@ -4,6 +4,17 @@ import { Client } from '@notionhq/client';
 const VOTE_WIDGET_PAGE_ID = '2ff6c41f-4b3a-81ad-b92d-d0af513a04ac';
 const RESULTS_DB_TITLES = ['Résultats', 'Results', 'Resultados'];
 
+function slugify(name: string): string {
+  return name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function isNotionId(str: string): boolean {
+  return /^[a-f0-9-]{32,36}$/.test(str.replace(/-/g, ''));
+}
+
 export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.NOTION_API_KEY;
@@ -11,12 +22,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'NOTION_API_KEY not configured' }, { status: 500 });
     }
 
-    const pageId = request.nextUrl.searchParams.get('pageId');
+    let pageId = request.nextUrl.searchParams.get('pageId');
     if (!pageId) {
       return NextResponse.json({ error: 'pageId is required' }, { status: 400 });
     }
 
     const notion = new Client({ auth: apiKey });
+
+    // Resolve slug to Notion page ID if not a UUID
+    if (!isNotionId(pageId)) {
+      const children = await notion.blocks.children.list({
+        block_id: VOTE_WIDGET_PAGE_ID,
+        page_size: 100,
+      });
+      let resolved = false;
+      for (const block of children.results) {
+        if ('type' in block && block.type === 'child_page') {
+          const title = (block as { child_page: { title: string }; id: string }).child_page.title;
+          if (slugify(title) === pageId.toLowerCase()) {
+            pageId = block.id;
+            resolved = true;
+            break;
+          }
+        }
+      }
+      if (!resolved) {
+        return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+      }
+    }
 
     // 1. Retrieve client page to get title
     const page = await notion.pages.retrieve({ page_id: pageId });

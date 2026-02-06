@@ -94,6 +94,7 @@ export default function DemoPage() {
           voterName: voterName.trim() || undefined,
           conceptId: selectedConcept,
           conceptLabel: label,
+          siteUrl: siteUrl.trim() || undefined,
         }),
       });
 
@@ -108,7 +109,7 @@ export default function DemoPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedConcept, voterName]);
+  }, [selectedConcept, voterName, siteUrl]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 text-slate-900">
@@ -116,7 +117,9 @@ export default function DemoPage() {
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ViaSayLogo className="h-7 sm:h-8 w-auto" />
+            <a href="https://www.viasay.io/" target="_blank" rel="noopener noreferrer">
+              <ViaSayLogo className="h-7 sm:h-8 w-auto" />
+            </a>
           </div>
           <div className="flex gap-2">
             <button
@@ -138,7 +141,9 @@ export default function DemoPage() {
       {/* Section 1: Hero + Concepts */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         <div className="text-center mb-12">
-          <ViaSayLogo className="h-10 sm:h-12 w-auto mx-auto mb-6" />
+          <a href="https://www.viasay.io/" target="_blank" rel="noopener noreferrer" className="inline-block">
+            <ViaSayLogo className="h-10 sm:h-12 w-auto mx-auto mb-6" />
+          </a>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
             Quel design de widget preferez-vous ?
           </h2>
@@ -278,12 +283,12 @@ export default function DemoPage() {
                         alt={`Preview ${concept.id}`}
                         className="w-full h-full object-cover object-top"
                       />
-                      <div className="absolute bottom-3 right-3">
+                      <div className="absolute bottom-2 right-2">
                         <WidgetButton
                           concept={concept.id}
                           buttonColor={buttonColor}
                           presenceColor={presenceColor}
-                          size={44}
+                          size={36}
                         />
                       </div>
                       <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm rounded text-xs font-bold text-white">
@@ -438,7 +443,9 @@ export default function DemoPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 text-center">
-          <ViaSayLogo className="h-6 w-auto mx-auto opacity-40" />
+          <a href="https://www.viasay.io/" target="_blank" rel="noopener noreferrer" className="inline-block">
+            <ViaSayLogo className="h-6 w-auto mx-auto opacity-40" />
+          </a>
           <p className="text-xs text-slate-400 mt-2">Powered by ViaSay</p>
         </div>
       </footer>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { CONCEPTS, ConceptId, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
 import { extractDominantColor, getFaviconUrl } from '@/lib/colorExtractor';
@@ -58,6 +58,34 @@ export default function GeneratePage() {
     .replace(/[^a-z0-9]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '') || 'client';
+
+  // Slug for vote URL
+  const clientSlug = clientName
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || '';
+
+  // Paste image from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (currentStep !== 2) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+          const reader = new FileReader();
+          reader.onload = () => setScreenshotUrl(reader.result as string);
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [currentStep]);
 
   // Load site and extract color
   const handleLoadSite = useCallback(async () => {
@@ -253,6 +281,11 @@ export default function GeneratePage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Fichiers: {sanitizedClientName}-widget-B.png, etc.
                 </p>
+                {clientSlug && (
+                  <p className="mt-1 text-xs text-blue-400">
+                    Lien de vote : /vote/{clientSlug}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -336,6 +369,31 @@ export default function GeneratePage() {
               >
                 ← Modifier l&apos;URL
               </button>
+            </div>
+
+            {/* Replace screenshot */}
+            <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Remplacer le screenshot
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                  Choisir un fichier
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setScreenshotUrl(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+                <span className="text-xs text-slate-500">ou collez une image (Ctrl+V)</span>
+              </div>
             </div>
 
             {/* Color pickers */}
@@ -457,13 +515,13 @@ export default function GeneratePage() {
               <div className="flex gap-2">
                 <input
                   readOnly
-                  value={`${window.location.origin}/vote/${votePageId}`}
+                  value={`${window.location.origin}/vote/${clientSlug || votePageId}`}
                   className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm font-mono select-all"
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/vote/${votePageId}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/vote/${clientSlug || votePageId}`);
                     setLinkCopied(true);
                     setTimeout(() => setLinkCopied(false), 2000);
                   }}

@@ -8,6 +8,7 @@ interface RequestBody {
   voterName?: string;
   conceptId: string;
   conceptLabel: string;
+  siteUrl?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: RequestBody = await request.json();
-    const { voterName, conceptId, conceptLabel } = body;
+    const { voterName, conceptId, conceptLabel, siteUrl } = body;
 
     if (!conceptId || !conceptLabel) {
       return NextResponse.json({ error: 'conceptId and conceptLabel are required' }, { status: 400 });
@@ -84,6 +85,12 @@ export async function POST(request: NextRequest) {
           type: 'url',
           url: 'https://linkedin.com',
         },
+        ...(siteUrl ? {
+          Commentaire: {
+            type: 'rich_text',
+            rich_text: [{ type: 'text', text: { content: siteUrl } }],
+          },
+        } : {}),
       } as Parameters<Client['pages']['create']>[0]['properties'],
     });
 
