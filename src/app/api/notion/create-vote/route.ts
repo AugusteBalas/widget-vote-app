@@ -34,42 +34,42 @@ const LABELS: Record<Lang, {
 }> = {
   fr: {
     ranking: 'Classement',
-    rankOptions: ['1er choix', '2e choix', '3e choix', '4e choix'],
+    rankOptions: ['1er choix', '2e choix', '3e choix'],
     description: 'Description',
     recommended: 'Recommandé',
     image: 'Image',
     comment: 'Commentaire',
     dbTitle: 'Designs proposés',
     resultsDbTitle: 'Résultats',
-    resultRankCols: ['1er choix', '2e choix', '3e choix', '4e choix'],
+    resultRankCols: ['1er choix', '2e choix', '3e choix'],
     resultComment: 'Commentaire',
     resultDate: 'Date',
     resultVoteLink: 'Lien vote',
   },
   en: {
     ranking: 'Ranking',
-    rankOptions: ['1st choice', '2nd choice', '3rd choice', '4th choice'],
+    rankOptions: ['1st choice', '2nd choice', '3rd choice'],
     description: 'Description',
     recommended: 'Recommended',
     image: 'Image',
     comment: 'Comment',
     dbTitle: 'Proposed designs',
     resultsDbTitle: 'Results',
-    resultRankCols: ['1st choice', '2nd choice', '3rd choice', '4th choice'],
+    resultRankCols: ['1st choice', '2nd choice', '3rd choice'],
     resultComment: 'Comment',
     resultDate: 'Date',
     resultVoteLink: 'Vote link',
   },
   es: {
     ranking: 'Clasificación',
-    rankOptions: ['1ª opción', '2ª opción', '3ª opción', '4ª opción'],
+    rankOptions: ['1ª opción', '2ª opción', '3ª opción'],
     description: 'Descripción',
     recommended: 'Recomendado',
     image: 'Imagen',
     comment: 'Comentario',
     dbTitle: 'Diseños propuestos',
     resultsDbTitle: 'Resultados',
-    resultRankCols: ['1ª opción', '2ª opción', '3ª opción', '4ª opción'],
+    resultRankCols: ['1ª opción', '2ª opción', '3ª opción'],
     resultComment: 'Comentario',
     resultDate: 'Fecha',
     resultVoteLink: 'Enlace de voto',
@@ -92,6 +92,14 @@ const CONCEPT_META: Record<string, { name: Record<Lang, string>; description: Re
   D2: {
     name:        { fr: 'Symétrie + Badge', en: 'Symmetry + Badge', es: 'Simetría + Badge' },
     description: { fr: 'Logo symétrique avec badge de notification', en: 'Symmetric logo with notification badge', es: 'Logo simétrico con insignia de notificación' },
+  },
+  OLD: {
+    name:        { fr: 'Actuel + Présence', en: 'Current + Presence', es: 'Actual + Presencia' },
+    description: { fr: 'Widget actuel avec point vert de présence', en: 'Current widget with green presence dot', es: 'Widget actual con punto verde de presencia' },
+  },
+  OLD2: {
+    name:        { fr: 'Actuel + Badge', en: 'Current + Badge', es: 'Actual + Badge' },
+    description: { fr: 'Widget actuel avec badge de notification', en: 'Current widget with notification badge', es: 'Widget actual con insignia de notificación' },
   },
 };
 
@@ -189,7 +197,7 @@ export async function POST(request: NextRequest) {
             select: {
               options: labels.rankOptions.map((name, i) => ({
                 name,
-                color: (['green', 'blue', 'yellow', 'gray'] as const)[i],
+                color: (['green', 'blue', 'yellow'] as const)[i],
               })),
             },
           },
@@ -201,7 +209,7 @@ export async function POST(request: NextRequest) {
     const databaseId = db.id;
 
     // 4. Add one row per variant
-    const conceptOrder = ['B', 'B2', 'D', 'D2'];
+    const conceptOrder = ['B', 'B2', 'D', 'D2', 'OLD', 'OLD2'];
     for (const conceptId of conceptOrder) {
       const meta = CONCEPT_META[conceptId];
       const upload = uploadedFiles.find((f) => f.conceptId === conceptId);
@@ -275,7 +283,6 @@ export async function POST(request: NextRequest) {
             [labels.resultRankCols[0]]: { type: 'rich_text', rich_text: {} },
             [labels.resultRankCols[1]]: { type: 'rich_text', rich_text: {} },
             [labels.resultRankCols[2]]: { type: 'rich_text', rich_text: {} },
-            [labels.resultRankCols[3]]: { type: 'rich_text', rich_text: {} },
             [labels.resultComment]: { type: 'rich_text', rich_text: {} },
             [labels.resultDate]: { type: 'date', date: {} },
             [labels.resultVoteLink]: { type: 'url', url: {} },

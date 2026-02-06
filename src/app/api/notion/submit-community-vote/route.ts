@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
             '1er choix': { type: 'rich_text', rich_text: {} },
             '2e choix': { type: 'rich_text', rich_text: {} },
             '3e choix': { type: 'rich_text', rich_text: {} },
-            '4e choix': { type: 'rich_text', rich_text: {} },
             Commentaire: { type: 'rich_text', rich_text: {} },
             Date: { type: 'date', date: {} },
             'Lien vote': { type: 'url', url: {} },

@@ -34,15 +34,15 @@ interface VoteData {
 const UI_TEXT = {
   fr: {
     heroTitle: 'Quel design de widget préférez-vous ?',
-    heroSubtitle: 'Découvrez nos 4 concepts et classez-les selon vos préférences',
+    heroSubtitle: 'Découvrez nos 6 concepts et classez vos 3 préférés',
     previewTitle: 'Aperçu des designs',
     previewSubtitle: 'Voici à quoi ressemblera chaque widget sur votre site',
     buttonColor: 'Couleur du bouton',
     voteTitle: 'Classez vos préférences',
-    voteSubtitle: 'Classez les 4 designs du plus au moins apprécié',
+    voteSubtitle: 'Sélectionnez vos 3 designs préférés parmi les 6 propositions',
     rank: 'Classement',
     rankPlaceholder: '—',
-    rankOptions: ['1er choix', '2e choix', '3e choix', '4e choix'],
+    rankOptions: ['1er choix', '2e choix', '3e choix'],
     comment: 'Commentaire (optionnel)',
     commentPlaceholder: 'Dites-nous ce que vous pensez...',
     submit: 'Envoyer mon vote',
@@ -50,22 +50,22 @@ const UI_TEXT = {
     success: 'Merci pour votre vote !',
     successSub: 'Vos préférences ont été enregistrées.',
     errorDuplicate: 'Chaque rang ne peut être utilisé qu\'une seule fois',
-    errorAll: 'Veuillez classer les 4 designs',
+    errorAll: 'Veuillez sélectionner vos 3 préférés',
     modifyBanner: 'Vous avez déjà voté — vous pouvez modifier vos choix ci-dessous',
     successModified: 'Vote modifié !',
     successModifiedSub: 'Vos nouvelles préférences ont été enregistrées.',
   },
   en: {
     heroTitle: 'Which widget design do you prefer?',
-    heroSubtitle: 'Discover our 4 concepts and rank them by preference',
+    heroSubtitle: 'Discover our 6 concepts and pick your top 3',
     previewTitle: 'Design preview',
     previewSubtitle: 'Here\'s what each widget will look like on your site',
     buttonColor: 'Button color',
     voteTitle: 'Rank your preferences',
-    voteSubtitle: 'Rank the 4 designs from most to least preferred',
+    voteSubtitle: 'Select your top 3 designs from the 6 options',
     rank: 'Ranking',
     rankPlaceholder: '—',
-    rankOptions: ['1st choice', '2nd choice', '3rd choice', '4th choice'],
+    rankOptions: ['1st choice', '2nd choice', '3rd choice'],
     comment: 'Comment (optional)',
     commentPlaceholder: 'Tell us what you think...',
     submit: 'Submit my vote',
@@ -73,22 +73,22 @@ const UI_TEXT = {
     success: 'Thank you for your vote!',
     successSub: 'Your preferences have been recorded.',
     errorDuplicate: 'Each rank can only be used once',
-    errorAll: 'Please rank all 4 designs',
+    errorAll: 'Please select your top 3 designs',
     modifyBanner: 'You have already voted — you can modify your choices below',
     successModified: 'Vote modified!',
     successModifiedSub: 'Your new preferences have been recorded.',
   },
   es: {
     heroTitle: '¿Qué diseño de widget prefiere?',
-    heroSubtitle: 'Descubra nuestros 4 conceptos y clasifíquelos según sus preferencias',
+    heroSubtitle: 'Descubra nuestros 6 conceptos y elija sus 3 favoritos',
     previewTitle: 'Vista previa de los diseños',
     previewSubtitle: 'Así es como se verá cada widget en su sitio',
     buttonColor: 'Color del botón',
     voteTitle: 'Clasifique sus preferencias',
-    voteSubtitle: 'Clasifique los 4 diseños del más al menos preferido',
+    voteSubtitle: 'Seleccione sus 3 diseños favoritos entre las 6 opciones',
     rank: 'Clasificación',
     rankPlaceholder: '—',
-    rankOptions: ['1ª opción', '2ª opción', '3ª opción', '4ª opción'],
+    rankOptions: ['1ª opción', '2ª opción', '3ª opción'],
     comment: 'Comentario (opcional)',
     commentPlaceholder: 'Díganos lo que piensa...',
     submit: 'Enviar mi voto',
@@ -96,7 +96,7 @@ const UI_TEXT = {
     success: '¡Gracias por su voto!',
     successSub: 'Sus preferencias han sido registradas.',
     errorDuplicate: 'Cada rango solo se puede usar una vez',
-    errorAll: 'Por favor clasifique los 4 diseños',
+    errorAll: 'Por favor seleccione sus 3 diseños favoritos',
     modifyBanner: 'Ya ha votado — puede modificar sus opciones a continuación',
     successModified: '¡Voto modificado!',
     successModifiedSub: 'Sus nuevas preferencias han sido registradas.',
@@ -104,7 +104,10 @@ const UI_TEXT = {
 };
 
 // Map design titles to concept IDs for WidgetButton
-function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | null {
+function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2' | null {
+  // Check OLD2 before OLD (same logic as B2 before B)
+  if (/\bOLD2\b/i.test(title)) return 'OLD2';
+  if (/\bOLD\b/i.test(title)) return 'OLD';
   const match = title.match(/\b(B2|D2|B|D)\b/);
   return match ? (match[1] as 'B' | 'B2' | 'D' | 'D2') : null;
 }
@@ -172,7 +175,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
   };
 
   const handleSubmit = async () => {
-    if (Object.keys(rankings).length !== data.designs.length) {
+    if (Object.keys(rankings).length !== t.rankOptions.length) {
       setError(t.errorAll);
       return;
     }
@@ -235,7 +238,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
         </div>
 
         {/* Widget concepts overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {data.designs.map((design) => {
             const conceptId = extractConceptId(design.title);
             return (
@@ -319,7 +322,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
           </div>
 
           {/* Preview grid with Notion images */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.designs.map((design) => {
               const conceptId = extractConceptId(design.title);
               return (
@@ -395,7 +398,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
           )}
 
           {/* Design vote cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
             {data.designs.map((design) => {
               const currentRank = rankings[design.pageId] || '';
               const conceptId = extractConceptId(design.title);

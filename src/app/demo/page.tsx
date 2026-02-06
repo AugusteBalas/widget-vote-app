@@ -11,6 +11,8 @@ const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> =
   B2: { name: 'Rotation + Badge', description: 'Logo inversé avec badge de notification' },
   D:  { name: 'Symétrie + Présence', description: 'Logo symétrique avec point vert de présence' },
   D2: { name: 'Symétrie + Badge', description: 'Logo symétrique avec badge de notification' },
+  OLD: { name: 'Actuel + Présence', description: 'Widget actuel avec point vert de présence' },
+  OLD2: { name: 'Actuel + Badge', description: 'Widget actuel avec badge de notification' },
 };
 
 export default function DemoPage() {
@@ -148,11 +150,11 @@ export default function DemoPage() {
             Quel design de widget preferez-vous ?
           </h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-            Nous redesignons notre widget de chat. Testez les 4 concepts sur votre site et votez pour votre prefere !
+            Nous redesignons notre widget de chat. Testez les 6 concepts sur votre site et votez pour votre prefere !
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
           {CONCEPTS.map((concept) => {
             const meta = CONCEPT_LABELS[concept.id];
             return (
@@ -334,7 +336,7 @@ export default function DemoPage() {
                 Votez pour votre prefere
               </h2>
               <p className="text-slate-500">
-                Selectionnez le concept que vous preferez
+                Selectionnez le concept que vous preferez parmi les 5 propositions
               </p>
             </div>
 

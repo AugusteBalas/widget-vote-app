@@ -426,7 +426,7 @@ export default function GeneratePage() {
             </div>
 
             {/* Preview Grid */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               {CONCEPTS.map((concept) => (
                 <div key={concept.id} className="space-y-2">
                   <div className="flex items-center gap-2">

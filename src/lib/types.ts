@@ -1,4 +1,4 @@
-export type ConceptId = 'B' | 'B2' | 'D' | 'D2';
+export type ConceptId = 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2';
 
 export interface WidgetConfig {
   concept: ConceptId;
@@ -37,6 +37,18 @@ export const CONCEPTS: ConceptInfo[] = [
     id: 'D2',
     name: 'Symetrie + Badge',
     description: 'Logo symetrique avec badge de notification',
+    hasIntegratedPresence: false,
+  },
+  {
+    id: 'OLD',
+    name: 'Actuel + Presence',
+    description: 'Widget actuel avec point vert de presence',
+    hasIntegratedPresence: false,
+  },
+  {
+    id: 'OLD2',
+    name: 'Actuel + Badge',
+    description: 'Widget actuel avec badge de notification',
     hasIntegratedPresence: false,
   },
 ];

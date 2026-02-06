@@ -25,19 +25,19 @@ const RESULT_LABELS: Record<Lang, {
   voteLink: string;
 }> = {
   fr: {
-    rankCols: ['1er choix', '2e choix', '3e choix', '4e choix'],
+    rankCols: ['1er choix', '2e choix', '3e choix'],
     comment: 'Commentaire',
     date: 'Date',
     voteLink: 'Lien vote',
   },
   en: {
-    rankCols: ['1st choice', '2nd choice', '3rd choice', '4th choice'],
+    rankCols: ['1st choice', '2nd choice', '3rd choice'],
     comment: 'Comment',
     date: 'Date',
     voteLink: 'Vote link',
   },
   es: {
-    rankCols: ['1ª opción', '2ª opción', '3ª opción', '4ª opción'],
+    rankCols: ['1ª opción', '2ª opción', '3ª opción'],
     comment: 'Comentario',
     date: 'Fecha',
     voteLink: 'Enlace de voto',
