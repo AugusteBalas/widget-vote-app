@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import WidgetButton from '@/components/WidgetButton';
+import { DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
+import ViaSayLogo from '@/components/ViaSayLogo';
 
 interface Design {
   pageId: string;
@@ -30,8 +33,13 @@ interface VoteData {
 
 const UI_TEXT = {
   fr: {
-    title: 'Quel design préférez-vous ?',
-    subtitle: 'Classez les 4 designs du plus au moins apprécié',
+    heroTitle: 'Quel design de widget préférez-vous ?',
+    heroSubtitle: 'Découvrez nos 4 concepts et classez-les selon vos préférences',
+    previewTitle: 'Aperçu des designs',
+    previewSubtitle: 'Voici à quoi ressemblera chaque widget sur votre site',
+    buttonColor: 'Couleur du bouton',
+    voteTitle: 'Classez vos préférences',
+    voteSubtitle: 'Classez les 4 designs du plus au moins apprécié',
     rank: 'Classement',
     rankPlaceholder: '—',
     rankOptions: ['1er choix', '2e choix', '3e choix', '4e choix'],
@@ -41,9 +49,6 @@ const UI_TEXT = {
     submitting: 'Envoi en cours...',
     success: 'Merci pour votre vote !',
     successSub: 'Vos préférences ont été enregistrées.',
-    alreadyVoted: 'Vote déjà enregistré',
-    alreadyVotedSub: 'Les préférences ont déjà été soumises pour ce sondage.',
-    recommended: 'Recommandé',
     errorDuplicate: 'Chaque rang ne peut être utilisé qu\'une seule fois',
     errorAll: 'Veuillez classer les 4 designs',
     modifyBanner: 'Vous avez déjà voté — vous pouvez modifier vos choix ci-dessous',
@@ -51,8 +56,13 @@ const UI_TEXT = {
     successModifiedSub: 'Vos nouvelles préférences ont été enregistrées.',
   },
   en: {
-    title: 'Which design do you prefer?',
-    subtitle: 'Rank the 4 designs from most to least preferred',
+    heroTitle: 'Which widget design do you prefer?',
+    heroSubtitle: 'Discover our 4 concepts and rank them by preference',
+    previewTitle: 'Design preview',
+    previewSubtitle: 'Here\'s what each widget will look like on your site',
+    buttonColor: 'Button color',
+    voteTitle: 'Rank your preferences',
+    voteSubtitle: 'Rank the 4 designs from most to least preferred',
     rank: 'Ranking',
     rankPlaceholder: '—',
     rankOptions: ['1st choice', '2nd choice', '3rd choice', '4th choice'],
@@ -62,9 +72,6 @@ const UI_TEXT = {
     submitting: 'Submitting...',
     success: 'Thank you for your vote!',
     successSub: 'Your preferences have been recorded.',
-    alreadyVoted: 'Vote already submitted',
-    alreadyVotedSub: 'Preferences have already been submitted for this poll.',
-    recommended: 'Recommended',
     errorDuplicate: 'Each rank can only be used once',
     errorAll: 'Please rank all 4 designs',
     modifyBanner: 'You have already voted — you can modify your choices below',
@@ -72,8 +79,13 @@ const UI_TEXT = {
     successModifiedSub: 'Your new preferences have been recorded.',
   },
   es: {
-    title: '¿Qué diseño prefiere?',
-    subtitle: 'Clasifique los 4 diseños del más al menos preferido',
+    heroTitle: '¿Qué diseño de widget prefiere?',
+    heroSubtitle: 'Descubra nuestros 4 conceptos y clasifíquelos según sus preferencias',
+    previewTitle: 'Vista previa de los diseños',
+    previewSubtitle: 'Así es como se verá cada widget en su sitio',
+    buttonColor: 'Color del botón',
+    voteTitle: 'Clasifique sus preferencias',
+    voteSubtitle: 'Clasifique los 4 diseños del más al menos preferido',
     rank: 'Clasificación',
     rankPlaceholder: '—',
     rankOptions: ['1ª opción', '2ª opción', '3ª opción', '4ª opción'],
@@ -83,9 +95,6 @@ const UI_TEXT = {
     submitting: 'Enviando...',
     success: '¡Gracias por su voto!',
     successSub: 'Sus preferencias han sido registradas.',
-    alreadyVoted: 'Voto ya registrado',
-    alreadyVotedSub: 'Las preferencias ya han sido enviadas para esta encuesta.',
-    recommended: 'Recomendado',
     errorDuplicate: 'Cada rango solo se puede usar una vez',
     errorAll: 'Por favor clasifique los 4 diseños',
     modifyBanner: 'Ya ha votado — puede modificar sus opciones a continuación',
@@ -94,9 +103,16 @@ const UI_TEXT = {
   },
 };
 
+// Map design titles to concept IDs for WidgetButton
+function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | null {
+  const match = title.match(/\b(B2|D2|B|D)\b/);
+  return match ? (match[1] as 'B' | 'B2' | 'D' | 'D2') : null;
+}
+
 export default function VoteForm({ data, clientPageId }: { data: VoteData; clientPageId: string }) {
   const t = UI_TEXT[data.lang] || UI_TEXT.fr;
 
+  const [buttonColor, setButtonColor] = useState(DEFAULT_BUTTON_COLOR);
   const [rankings, setRankings] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const design of data.designs) {
@@ -112,18 +128,30 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const voteSectionRef = useRef<HTMLElement>(null);
+
+  const scrollToVote = () => {
+    voteSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   // Success state
   if (submitted) {
     return (
-      <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-        <div className="text-6xl mb-6">🎉</div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-          {data.hasVoted ? t.successModified : t.success}
-        </h2>
-        <p className="text-slate-500">
-          {data.hasVoted ? t.successModifiedSub : t.successSub}
-        </p>
-      </div>
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="max-w-md mx-auto text-center py-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            {data.hasVoted ? t.successModified : t.success}
+          </h2>
+          <p className="text-slate-500">
+            {data.hasVoted ? t.successModifiedSub : t.successSub}
+          </p>
+        </div>
+      </section>
     );
   }
 
@@ -134,7 +162,6 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
       if (rank === '') {
         delete next[designPageId];
       } else {
-        // Remove this rank from any other design
         for (const key of Object.keys(next)) {
           if (next[key] === rank) delete next[key];
         }
@@ -145,13 +172,10 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
   };
 
   const handleSubmit = async () => {
-    // Validate all 4 designs are ranked
     if (Object.keys(rankings).length !== data.designs.length) {
       setError(t.errorAll);
       return;
     }
-
-    // Check for duplicates
     const usedRanks = Object.values(rankings);
     if (new Set(usedRanks).size !== usedRanks.length) {
       setError(t.errorDuplicate);
@@ -182,7 +206,6 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
       });
 
       const result = await res.json();
-
       if (!res.ok || result.error) {
         setError(result.error || 'Error');
       } else {
@@ -196,120 +219,285 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
-      {/* Title */}
-      <div className="text-center mb-10">
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">{t.title}</h2>
-        <p className="text-slate-500">{t.subtitle}</p>
-      </div>
-
-      {/* Modify banner */}
-      {data.hasVoted && (
-        <div className="max-w-2xl mx-auto mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm text-center">
-          {t.modifyBanner}
+    <>
+      {/* Section 1: Hero */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <div className="text-center mb-12">
+          <a href="https://www.viasay.io/" target="_blank" rel="noopener noreferrer" className="inline-block">
+            <ViaSayLogo className="h-10 sm:h-12 w-auto mx-auto mb-6" />
+          </a>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+            {t.heroTitle}
+          </h2>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
+            {t.heroSubtitle}
+          </p>
         </div>
-      )}
 
-      {/* Design Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        {data.designs.map((design) => {
-          const currentRank = rankings[design.pageId] || '';
-
-          return (
-            <div
-              key={design.pageId}
-              className={`relative rounded-2xl border-2 transition-all ${
-                currentRank
-                  ? 'border-blue-400 shadow-lg shadow-blue-100'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {/* Image */}
-              {design.imageUrl && (
-                <div className="aspect-video bg-slate-100 relative overflow-hidden rounded-t-[14px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={design.imageUrl}
-                    alt={design.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {design.recommended && (
-                    <span className="absolute top-3 right-3 px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full shadow-sm">
-                      ⭐ {t.recommended}
-                    </span>
+        {/* Widget concepts overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {data.designs.map((design) => {
+            const conceptId = extractConceptId(design.title);
+            return (
+              <div
+                key={design.pageId}
+                className="relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="my-6 sm:my-8">
+                  {conceptId ? (
+                    <WidgetButton
+                      concept={conceptId}
+                      buttonColor={buttonColor}
+                      presenceColor={DEFAULT_PRESENCE_COLOR}
+                      size={72}
+                    />
+                  ) : (
+                    <div className="w-[72px] h-[72px] bg-slate-200 rounded-full" />
                   )}
                 </div>
-              )}
+                <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1">
+                  {design.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  {design.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
 
-              {/* Info */}
-              <div className="p-5 bg-white">
-                <h3 className="font-semibold text-slate-900 text-lg mb-1">{design.title}</h3>
-                <p className="text-sm text-slate-500 mb-4">{design.description}</p>
+        <div className="text-center mt-8">
+          <button
+            onClick={scrollToVote}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-colors"
+          >
+            {t.voteTitle}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        </div>
+      </section>
 
-                {/* Rank selector */}
-                <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-slate-700">{t.rank}:</label>
-                  <div className="relative flex-1">
-                    <select
-                      value={currentRank}
-                      onChange={(e) => handleRankChange(design.pageId, e.target.value)}
-                      className={`w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-sm cursor-pointer transition-colors ${
-                        currentRank
-                          ? 'border-blue-300 bg-blue-50 text-blue-700 font-medium'
-                          : 'border-slate-300 bg-white text-slate-600'
-                      }`}
-                    >
-                      <option value="">{t.rankPlaceholder}</option>
-                      {t.rankOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+      {/* Section 2: Preview images + color picker */}
+      <section className="bg-slate-50 border-y border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
+              {t.previewTitle}
+            </h2>
+            <p className="text-slate-500">
+              {t.previewSubtitle}
+            </p>
+          </div>
+
+          {/* Color picker */}
+          <div className="max-w-xs mx-auto mb-8">
+            <label className="block text-sm font-medium text-slate-600 mb-2 text-center">
+              {t.buttonColor}
+            </label>
+            <div className="flex items-center justify-center gap-2">
+              <div className="relative w-10 h-10">
+                <div
+                  className="absolute inset-0 rounded-lg border-2 border-slate-300 pointer-events-none"
+                  style={{ backgroundColor: buttonColor }}
+                />
+                <input
+                  type="color"
+                  value={buttonColor}
+                  onChange={(e) => setButtonColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+              <input
+                type="text"
+                value={buttonColor}
+                onChange={(e) => setButtonColor(e.target.value)}
+                className="w-24 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-700 text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Preview grid with Notion images */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {data.designs.map((design) => {
+              const conceptId = extractConceptId(design.title);
+              return (
+                <div key={design.pageId} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-slate-700">
+                      {design.title}
+                    </span>
+                  </div>
+                  <div className="relative aspect-video bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                    {design.imageUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={design.imageUrl}
+                        alt={design.title}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">
+                        No preview
+                      </div>
+                    )}
+                    {conceptId && (
+                      <div className="absolute bottom-2 right-2">
+                        <WidgetButton
+                          concept={conceptId}
+                          buttonColor={buttonColor}
+                          presenceColor={DEFAULT_PRESENCE_COLOR}
+                          size={36}
+                        />
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 backdrop-blur-sm rounded text-xs font-bold text-white">
+                      {conceptId || '?'}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
 
-      {/* Comment */}
-      <div className="max-w-2xl mx-auto mb-8">
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          {t.comment}
-        </label>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder={t.commentPlaceholder}
-          rows={3}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
-        />
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="max-w-2xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm text-center">
-          {error}
+          <div className="text-center mt-8">
+            <button
+              onClick={scrollToVote}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              {t.voteTitle}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Submit */}
-      <div className="max-w-2xl mx-auto">
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-blue-200"
-        >
-          {isSubmitting ? t.submitting : t.submit}
-        </button>
-      </div>
-    </div>
+      {/* Section 3: Vote */}
+      <section ref={voteSectionRef} className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
+              {t.voteTitle}
+            </h2>
+            <p className="text-slate-500">
+              {t.voteSubtitle}
+            </p>
+          </div>
+
+          {/* Modify banner */}
+          {data.hasVoted && (
+            <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm text-center">
+              {t.modifyBanner}
+            </div>
+          )}
+
+          {/* Design vote cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+            {data.designs.map((design) => {
+              const currentRank = rankings[design.pageId] || '';
+              const conceptId = extractConceptId(design.title);
+
+              return (
+                <div
+                  key={design.pageId}
+                  className={`relative p-4 sm:p-5 rounded-2xl border-2 transition-all ${
+                    currentRank
+                      ? 'border-blue-400 bg-blue-50 shadow-lg shadow-blue-100'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    {conceptId && (
+                      <WidgetButton
+                        concept={conceptId}
+                        buttonColor={buttonColor}
+                        presenceColor={DEFAULT_PRESENCE_COLOR}
+                        size={40}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
+                        {design.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 hidden sm:block">
+                        {design.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Rank selector */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-slate-700">{t.rank}:</label>
+                    <div className="relative flex-1">
+                      <select
+                        value={currentRank}
+                        onChange={(e) => handleRankChange(design.pageId, e.target.value)}
+                        className={`w-full appearance-none px-3 py-2 pr-8 rounded-lg border text-sm cursor-pointer transition-colors ${
+                          currentRank
+                            ? 'border-blue-300 bg-blue-50 text-blue-700 font-medium'
+                            : 'border-slate-300 bg-white text-slate-600'
+                        }`}
+                      >
+                        <option value="">{t.rankPlaceholder}</option>
+                        {t.rankOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Comment */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              {t.comment}
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={t.commentPlaceholder}
+              rows={3}
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-3 shadow-lg"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {t.submitting}
+              </>
+            ) : (
+              t.submit
+            )}
+          </button>
+        </div>
+      </section>
+    </>
   );
 }
