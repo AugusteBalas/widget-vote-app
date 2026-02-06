@@ -146,10 +146,10 @@ export default function DemoPage() {
             <ViaSayLogo className="h-10 sm:h-12 w-auto mx-auto mb-6" />
           </a>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-            Quel design de widget preferez-vous ?
+            Quel design de widget préférez-vous ?
           </h2>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-            Nous redesignons notre widget de chat. Testez les 6 concepts sur votre site et votez pour votre prefere !
+            Nous redesignons notre widget de chat. Testez les 6 concepts sur votre site et votez pour votre préféré !
           </p>
         </div>
 
@@ -212,7 +212,7 @@ export default function DemoPage() {
               Testez sur votre site
             </h2>
             <p className="text-slate-500">
-              Entrez l&apos;URL de votre site pour voir a quoi ressemblera chaque widget
+              Entrez l&apos;URL de votre site pour voir à quoi ressemblera chaque widget
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export default function DemoPage() {
                   onClick={() => scrollTo(voteSectionRef)}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
                 >
-                  Votez pour votre prefere
+                  Votez pour votre préféré
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
@@ -350,10 +350,10 @@ export default function DemoPage() {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-                Votez pour votre prefere
+                Votez pour votre préféré
               </h2>
               <p className="text-slate-500">
-                Selectionnez le concept que vous preferez parmi les 6 propositions
+                Sélectionnez le concept que vous préférez parmi les 6 propositions
               </p>
             </div>
 
@@ -401,7 +401,7 @@ export default function DemoPage() {
                       />
                     </div>
                     <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                      {letter}
+                      Option {letter}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 hidden sm:block">
                       {CONCEPT_LABELS[concept.id].description}
@@ -457,10 +457,10 @@ export default function DemoPage() {
               Merci pour votre vote !
             </h2>
             <p className="text-slate-500 mb-2">
-              Vous avez vote pour <span className="font-semibold text-slate-700">Option {CONCEPT_LETTER[selectedConcept!]}</span>
+              Vous avez voté pour <span className="font-semibold text-slate-700">Option {CONCEPT_LETTER[selectedConcept!]}</span>
             </p>
             <p className="text-sm text-slate-400">
-              Votre avis nous aide a choisir le meilleur design pour notre widget.
+              Votre avis nous aide à choisir le meilleur design pour notre widget.
             </p>
           </div>
         )}
