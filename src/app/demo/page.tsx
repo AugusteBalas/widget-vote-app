@@ -181,7 +181,7 @@ export default function DemoPage() {
                   />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1">
-                  {letter}. {meta.name}
+                  {letter}
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                   {meta.description}
@@ -288,7 +288,7 @@ export default function DemoPage() {
                   <div key={concept.id} className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
-                        {letter}. {CONCEPT_LABELS[concept.id].name}
+                        {letter}. {CONCEPT_LABELS[concept.id].description}
                       </span>
                       {isCurrent && (
                         <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
@@ -401,7 +401,7 @@ export default function DemoPage() {
                       />
                     </div>
                     <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                      {letter}. {CONCEPT_LABELS[concept.id].name}
+                      {letter}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 hidden sm:block">
                       {CONCEPT_LABELS[concept.id].description}
@@ -457,7 +457,7 @@ export default function DemoPage() {
               Merci pour votre vote !
             </h2>
             <p className="text-slate-500 mb-2">
-              Vous avez vote pour <span className="font-semibold text-slate-700">{CONCEPT_LETTER[selectedConcept!]}. {CONCEPT_LABELS[selectedConcept!].name}</span>
+              Vous avez vote pour <span className="font-semibold text-slate-700">{CONCEPT_LETTER[selectedConcept!]}</span>
             </p>
             <p className="text-sm text-slate-400">
               Votre avis nous aide a choisir le meilleur design pour notre widget.
