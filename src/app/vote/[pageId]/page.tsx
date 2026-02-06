@@ -13,7 +13,7 @@ export default async function VotePage({ params }: VotePageProps) {
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000';
 
-  const res = await fetch(`${baseUrl}/api/notion/get-vote?pageId=${pageId}`, {
+  const res = await fetch(`${baseUrl}/api/notion/get-vote?pageId=${encodeURIComponent(pageId)}`, {
     cache: 'no-store',
   });
 

@@ -31,24 +31,40 @@ export async function GET(request: NextRequest) {
 
     // Resolve slug to Notion page ID if not a UUID
     if (!isNotionId(pageId)) {
-      const children = await notion.blocks.children.list({
-        block_id: VOTE_WIDGET_PAGE_ID,
-        page_size: 100,
-      });
+      const slug = slugify(pageId);
+      console.log('[get-vote] Resolving slug:', JSON.stringify(pageId), '→ slugified:', JSON.stringify(slug));
       let resolved = false;
-      for (const block of children.results) {
-        if ('type' in block && block.type === 'child_page') {
-          const title = (block as { child_page: { title: string }; id: string }).child_page.title;
-          if (slugify(title) === pageId.toLowerCase()) {
-            pageId = block.id;
-            resolved = true;
-            break;
+
+      // Paginate through all children of the Vote Widget page
+      let cursor: string | undefined;
+      do {
+        const children = await notion.blocks.children.list({
+          block_id: VOTE_WIDGET_PAGE_ID,
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        });
+
+        for (const block of children.results) {
+          if ('type' in block && block.type === 'child_page') {
+            const title = (block as { child_page: { title: string }; id: string }).child_page.title;
+            const titleSlug = slugify(title);
+            console.log('[get-vote]   child_page:', JSON.stringify(title), '→ slug:', JSON.stringify(titleSlug));
+            if (titleSlug === slug) {
+              pageId = block.id;
+              resolved = true;
+              break;
+            }
           }
         }
-      }
+
+        cursor = children.has_more ? children.next_cursor ?? undefined : undefined;
+      } while (!resolved && cursor);
+
       if (!resolved) {
+        console.log('[get-vote] Slug not found among children');
         return NextResponse.json({ error: 'Client not found' }, { status: 404 });
       }
+      console.log('[get-vote] Resolved to pageId:', pageId);
     }
 
     // 1. Retrieve client page to get title
