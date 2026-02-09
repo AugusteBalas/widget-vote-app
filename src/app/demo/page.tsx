@@ -6,6 +6,14 @@ import { extractDominantColor, getFaviconUrl } from '@/lib/colorExtractor';
 import WidgetButton from '@/components/WidgetButton';
 import ViaSayLogo from '@/components/ViaSayLogo';
 
+const QUICK_REPLY_SITES = [
+  { name: 'Orange', url: 'orange.fr', screenshot: '/previews/orange.png', color: '#FF6600' },
+  { name: 'Netflix', url: 'netflix.com', screenshot: '/previews/netflix.png', color: '#E50914' },
+  { name: 'Amazon', url: 'amazon.fr', screenshot: '/previews/amazon.png', color: '#232F3E' },
+  { name: 'Boursobank', url: 'boursobank.com', screenshot: '/previews/boursobank.png', color: '#E2007A' },
+  { name: 'Doctolib', url: 'doctolib.fr', screenshot: '/previews/doctolib.png', color: '#107ACA' },
+] as const;
+
 const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> = {
   B:  { name: 'Nouveau + Présence', description: 'Nouveau logo avec point vert de présence' },
   B2: { name: 'Nouveau + Badge', description: 'Nouveau logo avec badge de notification' },
@@ -50,6 +58,9 @@ export default function DemoPage() {
     loadExample();
   }, []);
 
+  // Active concept for single preview toggle
+  const [activePreviewConcept, setActivePreviewConcept] = useState<ConceptId>('B');
+
   // Vote state
   const [selectedConcept, setSelectedConcept] = useState<ConceptId | null>(null);
   const [voterName, setVoterName] = useState('');
@@ -65,14 +76,13 @@ export default function DemoPage() {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Load site screenshot
-  const handleLoadSite = useCallback(async () => {
-    if (!siteUrl.trim()) return;
+  // Shared logic for loading a site screenshot
+  const loadSiteScreenshot = useCallback(async (rawUrl: string) => {
     setIsLoadingSite(true);
     setSiteError(null);
 
     try {
-      let url = siteUrl.trim();
+      let url = rawUrl.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = `https://${url}`;
       }
@@ -97,14 +107,28 @@ export default function DemoPage() {
         setSiteError(data.error);
       } else if (data.screenshotUrl) {
         setScreenshotUrl(data.screenshotUrl);
-        setIsUsingExample(false); // User loaded their own site
+        setIsUsingExample(false);
       }
     } catch {
       setSiteError('Erreur de connexion');
     } finally {
       setIsLoadingSite(false);
     }
-  }, [siteUrl]);
+  }, []);
+
+  // Load site from URL input
+  const handleLoadSite = useCallback(() => {
+    if (!siteUrl.trim()) return;
+    loadSiteScreenshot(siteUrl);
+  }, [siteUrl, loadSiteScreenshot]);
+
+  // Load site from quick reply pill (instant, uses static screenshots)
+  const handleQuickReply = useCallback((site: typeof QUICK_REPLY_SITES[number]) => {
+    setSiteUrl(site.url);
+    setScreenshotUrl(site.screenshot);
+    setButtonColor(site.color);
+    setIsUsingExample(false);
+  }, []);
 
   // Submit community vote
   const handleVote = useCallback(async () => {
@@ -234,17 +258,20 @@ export default function DemoPage() {
       {/* Section 2: Test on your site */}
       <section ref={testSectionRef} className="bg-slate-50 border-y border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          {/* CTA dominant */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-              Testez sur votre site
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+              Voyez le résultat sur{' '}
+              <span className="text-blue-600 font-extrabold">VOTRE</span>{' '}
+              site
             </h2>
-            <p className="text-slate-500">
-              Entrez l&apos;URL de votre site pour voir à quoi ressemblera chaque widget
+            <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto">
+              Entrez votre URL et visualisez chaque widget directement sur votre page
             </p>
           </div>
 
           {/* URL input */}
-          <div className="max-w-xl mx-auto mb-8">
+          <div className="max-w-xl mx-auto mb-6">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,17 +301,34 @@ export default function DemoPage() {
             {siteError && (
               <p className="mt-2 text-sm text-red-500">{siteError}</p>
             )}
-            <p className="mt-2 text-xs text-slate-400 text-center">Certains sites peuvent bloquer la capture automatique</p>
           </div>
 
-          {/* Preview grid - show example by default or user's site */}
+          {/* Quick reply pills */}
+          <div className="max-w-xl mx-auto mb-10">
+            <p className="text-center text-sm text-slate-400 mb-3">
+              Ou essayez avec un site connu
+            </p>
+            <div className="flex justify-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {QUICK_REPLY_SITES.map((site) => (
+                <button
+                  key={site.url}
+                  onClick={() => handleQuickReply(site)}
+                  disabled={isLoadingSite}
+                  className="shrink-0 px-4 py-2 rounded-full border border-slate-300 bg-white text-slate-600 text-sm font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {site.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Single preview + widget toggle */}
           {(() => {
             const currentScreenshot = isUsingExample ? exampleScreenshot : screenshotUrl;
             const currentColor = isUsingExample ? exampleColor : buttonColor;
             const showPreview = currentScreenshot || isLoadingSite;
 
             if (!showPreview && !exampleLoaded) {
-              // Loading state for example
               return (
                 <div className="text-center py-12">
                   <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
@@ -294,13 +338,12 @@ export default function DemoPage() {
             }
 
             if (!showPreview) {
-              // No example available and no user site
               return (
                 <div className="text-center py-12 text-slate-400">
                   <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <p>Entrez une URL ci-dessus pour voir les previews</p>
+                  <p>Entrez une URL ci-dessus ou choisissez un site connu</p>
                 </div>
               );
             }
@@ -348,44 +391,82 @@ export default function DemoPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {CONCEPTS.map((concept) => {
-                    const letter = CONCEPT_LETTER[concept.id];
-                    const isCurrent = isCurrentWidget(concept.id);
-                    return (
-                    <div key={concept.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
-                          Option {letter}
-                        </span>
-                        {isCurrent && (
-                          <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
-                        )}
-                      </div>
-                      <div className={`relative aspect-video bg-white rounded-xl overflow-hidden border shadow-sm ${isCurrent ? 'border-slate-300 border-dashed' : 'border-slate-200'}`}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={currentScreenshot || ''}
-                          alt={`Preview ${concept.id}`}
-                          className="w-full h-full object-cover object-top"
-                        />
-                        <div className="absolute bottom-2 right-2">
-                          <WidgetButton
-                            concept={concept.id}
-                            buttonColor={isCurrent ? '#636480' : currentColor}
-                            presenceColor={presenceColor}
-                            size={36}
-                          />
-                        </div>
-                        <div className={`absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/50'}`}>
-                          {letter}
-                        </div>
-                      </div>
+                {/* Single large preview */}
+                <div className="max-w-2xl mx-auto">
+                  <div className="relative aspect-video bg-white rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={currentScreenshot || ''}
+                      alt="Site preview"
+                      className="w-full h-full object-cover object-top"
+                    />
+                    {/* Widget overlay */}
+                    <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
+                      <WidgetButton
+                        concept={activePreviewConcept}
+                        buttonColor={isCurrentWidget(activePreviewConcept) ? '#636480' : currentColor}
+                        presenceColor={presenceColor}
+                        size={60}
+                      />
                     </div>
-                    );
-                  })}
+                    {/* Concept letter badge */}
+                    <div className={`absolute top-3 left-3 px-3 py-1 backdrop-blur-sm rounded-lg text-sm font-bold text-white ${
+                      isCurrentWidget(activePreviewConcept) ? 'bg-slate-500/70' : 'bg-blue-600/80'
+                    }`}>
+                      Option {CONCEPT_LETTER[activePreviewConcept]}
+                    </div>
+                  </div>
                 </div>
 
+                {/* Concept selector bar */}
+                <div className="max-w-2xl mx-auto">
+                  <div className="flex items-center justify-center gap-2 sm:gap-3">
+                    {CONCEPTS.map((concept) => {
+                      const letter = CONCEPT_LETTER[concept.id];
+                      const isCurrent = isCurrentWidget(concept.id);
+                      const isActive = activePreviewConcept === concept.id;
+
+                      return (
+                        <div
+                          key={concept.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setActivePreviewConcept(concept.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActivePreviewConcept(concept.id); } }}
+                          className={`relative flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl transition-all duration-200 cursor-pointer ${
+                            isActive
+                              ? 'bg-blue-50 ring-2 ring-blue-500 scale-110 shadow-md'
+                              : isCurrent
+                                ? 'bg-slate-50 border border-dashed border-slate-300 hover:bg-slate-100 hover:scale-105'
+                                : 'bg-white border border-slate-200 hover:bg-slate-50 hover:scale-105 hover:border-slate-300'
+                          }`}
+                          title={CONCEPT_LABELS[concept.id].name}
+                        >
+                          <div className="pointer-events-none">
+                            <WidgetButton
+                              concept={concept.id}
+                              buttonColor={isCurrent ? '#636480' : currentColor}
+                              presenceColor={presenceColor}
+                              size={32}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold ${
+                            isActive ? 'text-blue-600' : 'text-slate-500'
+                          }`}>
+                            {letter}
+                          </span>
+                          {isCurrent && (
+                            <span className="absolute -top-1 -right-1 px-1 py-0.5 bg-slate-200 text-slate-500 text-[9px] font-medium rounded">
+                              actuel
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Vote CTA */}
                 <div className="text-center space-y-3">
                   {isUsingExample && (
                     <p className="text-sm text-slate-500">
@@ -394,7 +475,7 @@ export default function DemoPage() {
                   )}
                   <button
                     onClick={() => scrollTo(voteSectionRef)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
                   >
                     Votez pour votre préféré
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

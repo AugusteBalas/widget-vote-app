@@ -98,7 +98,8 @@ export default function WidgetButton({
   const badgeFontSize = size * 0.2;
 
   return (
-    <button
+    <div
+      role="button"
       className={`relative rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${className}`}
       style={{
         width: size,
@@ -162,6 +163,6 @@ export default function WidgetButton({
           1
         </span>
       )}
-    </button>
+    </div>
   );
 }
