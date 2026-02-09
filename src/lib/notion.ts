@@ -1,6 +1,9 @@
 import { Client } from '@notionhq/client';
 
 const VOTE_WIDGET_PAGE_ID = '2ff6c41f-4b3a-81ad-b92d-d0af513a04ac';
+// Client votes DB (from /generate) - checked first
+const CLIENT_VOTES_DB_TITLES = ['Votes Clients', 'Client Votes', 'Votos Clientes'];
+// Community/demo votes DB (legacy) - checked second
 const RESULTS_DB_TITLES = ['Résultats', 'Results', 'Resultados'];
 
 function slugify(name: string): string {
@@ -225,34 +228,55 @@ export async function getVoteData(pageIdOrSlug: string): Promise<GetVoteResult> 
     // Check if already voted (any row has a ranking set)
     const hasVoted = designs.some((d) => d.ranking !== null);
 
-    // 5. Find the result row for this client in the shared Results DB
+    // 5. Find the result row for this client - check "Votes Clients" first, then "Résultats"
     let resultRowId: string | undefined;
     try {
       const voteWidgetBlocks = await notion.blocks.children.list({
         block_id: VOTE_WIDGET_PAGE_ID,
         page_size: 50,
       });
-      const resultsDbBlock = voteWidgetBlocks.results.find((b) => {
-        if (!('type' in b) || b.type !== 'child_database') return false;
-        const db = b as { child_database: { title: string } };
-        return RESULTS_DB_TITLES.includes(db.child_database.title);
-      });
 
-      if (resultsDbBlock) {
-        const resultsDb = await notion.databases.retrieve({ database_id: resultsDbBlock.id });
-        if ('data_sources' in resultsDb && resultsDb.data_sources?.length) {
-          const resultsDs = resultsDb.data_sources[0].id;
-          const resultsQuery = await notion.dataSources.query({
-            data_source_id: resultsDs,
+      // Helper function to find client row in a DB
+      const findClientInDb = async (dbBlock: { id: string }): Promise<string | undefined> => {
+        const db = await notion.databases.retrieve({ database_id: dbBlock.id });
+        if ('data_sources' in db && db.data_sources?.length) {
+          const ds = db.data_sources[0].id;
+          const query = await notion.dataSources.query({
+            data_source_id: ds,
             filter: {
               property: 'Client',
               title: { equals: clientName },
             },
             page_size: 1,
           });
-          if (resultsQuery.results.length > 0) {
-            resultRowId = resultsQuery.results[0].id;
+          if (query.results.length > 0) {
+            return query.results[0].id;
           }
+        }
+        return undefined;
+      };
+
+      // First, check "Votes Clients" DB (for clients created via /generate)
+      const clientVotesDbBlock = voteWidgetBlocks.results.find((b) => {
+        if (!('type' in b) || b.type !== 'child_database') return false;
+        const db = b as { child_database: { title: string } };
+        return CLIENT_VOTES_DB_TITLES.includes(db.child_database.title);
+      });
+
+      if (clientVotesDbBlock) {
+        resultRowId = await findClientInDb(clientVotesDbBlock as { id: string });
+      }
+
+      // If not found, check "Résultats" DB (for community/demo votes)
+      if (!resultRowId) {
+        const resultsDbBlock = voteWidgetBlocks.results.find((b) => {
+          if (!('type' in b) || b.type !== 'child_database') return false;
+          const db = b as { child_database: { title: string } };
+          return RESULTS_DB_TITLES.includes(db.child_database.title);
+        });
+
+        if (resultsDbBlock) {
+          resultRowId = await findClientInDb(resultsDbBlock as { id: string });
         }
       }
     } catch (e) {
