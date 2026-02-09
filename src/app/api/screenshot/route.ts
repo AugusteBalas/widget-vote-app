@@ -1,15 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Cookie reject selectors for Playwright (when available)
-const COOKIE_REJECT_SELECTORS = [
+// Cookie reject/close selectors for Playwright - ordered by popularity in France
+const COOKIE_SELECTORS = [
+  // Axeptio (very common in France - wavestone.com uses this)
+  '[data-axeptio-action="close"]',
+  '.axeptio_btn_dismiss',
+  '.axeptio-widget__btn--close',
+  'button[class*="axeptio"][class*="close"]',
+  'button[class*="axeptio"][class*="dismiss"]',
+  // OneTrust
   '#onetrust-reject-all-handler',
+  '#onetrust-accept-btn-handler',
+  '.onetrust-close-btn-handler',
+  // Cookiebot
   '#CybotCookiebotDialogBodyButtonDecline',
+  '#CybotCookiebotDialogBodyButtonAccept',
+  // Didomi
   '#didomi-notice-disagree-button',
   '.didomi-continue-without-agreeing',
+  '#didomi-notice-agree-button',
+  // Tarteaucitron
   '#tarteaucitronAllDenied2',
+  '#tarteaucitronPersonalize2',
+  // Generic patterns
   '.cc-deny',
+  '.cc-dismiss',
   '#reject-cookies',
+  '#accept-cookies',
   'button[data-cookiebanner="reject_button"]',
+  'button[data-cookiebanner="accept_button"]',
+  // Common French patterns
+  'button:has-text("Refuser")',
+  'button:has-text("Tout refuser")',
+  'button:has-text("Continuer sans accepter")',
+  'button:has-text("Fermer")',
+  // Common English patterns
+  'button:has-text("Reject")',
+  'button:has-text("Decline")',
+  'button:has-text("Close")',
+  // ARIA labels
+  '[aria-label*="cookie" i][aria-label*="close" i]',
+  '[aria-label*="cookie" i][aria-label*="reject" i]',
+  '[aria-label*="cookie" i][aria-label*="dismiss" i]',
 ];
 
 export async function POST(request: NextRequest) {
@@ -32,16 +64,123 @@ export async function POST(request: NextRequest) {
     }
 
     const favicon = `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=64`;
+    const isLocal = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
 
-    // Try external services first (faster and work on Vercel serverless)
-    // Method 1: Microlink API (free, fast, no API key)
+    // Method 1: Try Playwright FIRST in local (handles cookie banners properly)
+    if (isLocal) {
+      try {
+        const { chromium } = await import('playwright');
+
+        const browser = await chromium.launch({
+          headless: true,
+        });
+
+        try {
+          const context = await browser.newContext({
+            viewport: { width: 1280, height: 720 },
+            userAgent:
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          });
+
+          const page = await context.newPage();
+
+          await page.goto(validUrl.toString(), {
+            waitUntil: 'networkidle',
+            timeout: 15000,
+          });
+
+          // Wait for cookie banners to appear
+          await page.waitForTimeout(1500);
+
+          // Try to dismiss cookie banners
+          for (const selector of COOKIE_SELECTORS) {
+            try {
+              // Handle text-based selectors differently
+              if (selector.includes(':has-text(')) {
+                const textMatch = selector.match(/:has-text\("([^"]+)"\)/);
+                if (textMatch) {
+                  const button = await page.locator(`button`, { hasText: textMatch[1] }).first();
+                  if (await button.isVisible({ timeout: 100 })) {
+                    await button.click();
+                    await page.waitForTimeout(500);
+                    break;
+                  }
+                }
+              } else {
+                const button = await page.$(selector);
+                if (button && await button.isVisible()) {
+                  await button.click();
+                  await page.waitForTimeout(500);
+                  break;
+                }
+              }
+            } catch {
+              // Continue to next selector
+            }
+          }
+
+          // Also try to hide any remaining cookie overlays via CSS
+          await page.addStyleTag({
+            content: `
+              [class*="cookie"], [class*="Cookie"], [id*="cookie"], [id*="Cookie"],
+              [class*="consent"], [class*="Consent"], [id*="consent"], [id*="Consent"],
+              [class*="axeptio"], [class*="Axeptio"], [id*="axeptio"],
+              [class*="gdpr"], [class*="GDPR"], [id*="gdpr"],
+              .cc-window, #onetrust-banner-sdk, #CybotCookiebotDialog,
+              [class*="tarteaucitron"], [id*="tarteaucitron"],
+              [class*="didomi"], [id*="didomi"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+              }
+            `,
+          });
+
+          await page.waitForTimeout(300);
+
+          const screenshot = await page.screenshot({
+            type: 'png',
+            fullPage: false,
+          });
+
+          const base64 = Buffer.from(screenshot).toString('base64');
+          const screenshotUrl = `data:image/png;base64,${base64}`;
+
+          return NextResponse.json({ screenshotUrl, favicon, source: 'playwright' });
+        } finally {
+          await browser.close();
+        }
+      } catch (e) {
+        console.log('Playwright failed:', e instanceof Error ? e.message : e);
+        // Fall through to external services
+      }
+    }
+
+    // Method 2: Microlink API (free, fast, no API key) - fallback for Vercel
+    // Inject script to hide cookie banners via CSS
     try {
-      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(
-        validUrl.toString()
-      )}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=1280&viewport.height=720`;
+      const hideCookieScript = `
+        (function(){
+          var style = document.createElement('style');
+          style.textContent = '[class*="cookie"],[class*="Cookie"],[id*="cookie"],[id*="Cookie"],[class*="consent"],[class*="Consent"],[id*="consent"],[id*="Consent"],[class*="axeptio"],[class*="Axeptio"],[id*="axeptio"],[class*="gdpr"],[class*="GDPR"],[id*="gdpr"],.cc-window,#onetrust-banner-sdk,#CybotCookiebotDialog,[class*="tarteaucitron"],[id*="tarteaucitron"],[class*="didomi"],[id*="didomi"]{display:none!important;visibility:hidden!important;opacity:0!important;}';
+          document.head.appendChild(style);
+        })();
+      `;
+
+      const microlinkParams = new URLSearchParams({
+        url: validUrl.toString(),
+        screenshot: 'true',
+        meta: 'false',
+        'viewport.width': '1280',
+        'viewport.height': '720',
+        scripts: hideCookieScript,
+        waitForTimeout: '2000', // Wait for cookie banners to load before hiding
+      });
+
+      const microlinkUrl = `https://api.microlink.io/?${microlinkParams.toString()}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // Longer timeout for script execution
 
       const microlinkResponse = await fetch(microlinkUrl, {
         headers: { Accept: 'application/json' },
@@ -61,7 +200,7 @@ export async function POST(request: NextRequest) {
       console.log('Microlink failed:', e instanceof Error ? e.message : e);
     }
 
-    // Method 2: Thum.io (simple, free, reliable)
+    // Method 3: Thum.io (simple, free, reliable)
     try {
       const thumioUrl = `https://image.thum.io/get/width/1280/crop/720/noanimate/${validUrl.toString()}`;
 
@@ -81,9 +220,7 @@ export async function POST(request: NextRequest) {
       console.log('Thum.io failed:', e instanceof Error ? e.message : e);
     }
 
-    // Method 3: Google PageSpeed API (free, but slower)
-    // NOTE: This returns base64 which can be too large for subsequent requests
-    // Only use as last resort and warn about potential size issues
+    // Method 4: Google PageSpeed API (free, but slower)
     try {
       const pageSpeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
         validUrl.toString()
@@ -103,7 +240,6 @@ export async function POST(request: NextRequest) {
           pageSpeedData?.lighthouseResult?.audits?.['final-screenshot']?.details?.data;
 
         if (screenshot) {
-          // Warn if base64 is too large (> 1MB when encoded)
           const isLarge = screenshot.length > 1_000_000;
           return NextResponse.json({
             screenshotUrl: screenshot,
@@ -116,62 +252,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.log('PageSpeed failed:', e instanceof Error ? e.message : e);
-    }
-
-    // Method 4: Try Playwright only in local development (not on Vercel)
-    if (process.env.NODE_ENV === 'development' || !process.env.VERCEL) {
-      try {
-        const { chromium } = await import('playwright');
-
-        const browser = await chromium.launch({
-          headless: true,
-        });
-
-        try {
-          const context = await browser.newContext({
-            viewport: { width: 1280, height: 720 },
-            userAgent:
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          });
-
-          const page = await context.newPage();
-
-          await page.goto(validUrl.toString(), {
-            waitUntil: 'domcontentloaded',
-            timeout: 10000,
-          });
-
-          // Try to reject cookies quickly
-          for (const selector of COOKIE_REJECT_SELECTORS) {
-            try {
-              const button = await page.$(selector);
-              if (button && await button.isVisible()) {
-                await button.click();
-                await page.waitForTimeout(300);
-                break;
-              }
-            } catch {
-              // Continue
-            }
-          }
-
-          await page.waitForTimeout(500);
-
-          const screenshot = await page.screenshot({
-            type: 'png',
-            fullPage: false,
-          });
-
-          const base64 = Buffer.from(screenshot).toString('base64');
-          const screenshotUrl = `data:image/png;base64,${base64}`;
-
-          return NextResponse.json({ screenshotUrl, favicon, source: 'playwright' });
-        } finally {
-          await browser.close();
-        }
-      } catch (e) {
-        console.log('Playwright failed:', e instanceof Error ? e.message : e);
-      }
     }
 
     // All methods failed
