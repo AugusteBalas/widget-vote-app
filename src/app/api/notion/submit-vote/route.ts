@@ -18,30 +18,12 @@ interface RequestBody {
   lang: Lang;
 }
 
-const RESULT_LABELS: Record<Lang, {
-  rankCols: string[];
-  comment: string;
-  date: string;
-  voteLink: string;
-}> = {
-  fr: {
-    rankCols: ['1er choix', '2e choix', '3e choix'],
-    comment: 'Commentaire',
-    date: 'Date',
-    voteLink: 'Lien vote',
-  },
-  en: {
-    rankCols: ['1st choice', '2nd choice', '3rd choice'],
-    comment: 'Comment',
-    date: 'Date',
-    voteLink: 'Vote link',
-  },
-  es: {
-    rankCols: ['1ª opción', '2ª opción', '3ª opción'],
-    comment: 'Comentario',
-    date: 'Fecha',
-    voteLink: 'Enlace de voto',
-  },
+// Fixed column names for Client Votes DB (always French since it's a shared central DB)
+// This matches the structure defined in create-vote/route.ts
+const CLIENT_VOTES_COLS = {
+  rankCols: ['1er choix', '2e choix', '3e choix'],
+  comment: 'Commentaire',
+  date: 'Date',
 };
 
 export async function POST(request: NextRequest) {
@@ -59,7 +41,6 @@ export async function POST(request: NextRequest) {
     }
 
     const notion = new Client({ auth: apiKey });
-    const labels = RESULT_LABELS[lang] || RESULT_LABELS.fr;
 
     // 1. Update each design row with its ranking, and collect titles
     const rankedDesigns: { rank: string; title: string }[] = [];
@@ -97,6 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Update the Results DB row (if we have one)
+    // Always use French column names since Client Votes DB is shared and uses French columns
     if (resultRowId) {
       // Sort designs by rank number
       rankedDesigns.sort((a, b) => {
@@ -106,23 +88,23 @@ export async function POST(request: NextRequest) {
       });
 
       const resultProps: Record<string, unknown> = {
-        [labels.date]: {
+        [CLIENT_VOTES_COLS.date]: {
           type: 'date',
           date: { start: new Date().toISOString().split('T')[0] },
         },
       };
 
-      // Fill each rank column with the design title
-      for (let i = 0; i < rankedDesigns.length && i < labels.rankCols.length; i++) {
-        resultProps[labels.rankCols[i]] = {
+      // Fill each rank column with the design title (always use French column names)
+      for (let i = 0; i < rankedDesigns.length && i < CLIENT_VOTES_COLS.rankCols.length; i++) {
+        resultProps[CLIENT_VOTES_COLS.rankCols[i]] = {
           type: 'rich_text',
           rich_text: [{ type: 'text', text: { content: rankedDesigns[i].title } }],
         };
       }
 
-      // Add comment
+      // Add comment (always use French column name)
       if (comment) {
-        resultProps[labels.comment] = {
+        resultProps[CLIENT_VOTES_COLS.comment] = {
           type: 'rich_text',
           rich_text: [{ type: 'text', text: { content: comment } }],
         };
