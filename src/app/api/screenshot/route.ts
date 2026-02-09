@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Method 3: Google PageSpeed API (free, but slower)
+    // NOTE: This returns base64 which can be too large for subsequent requests
+    // Only use as last resort and warn about potential size issues
     try {
       const pageSpeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
         validUrl.toString()
@@ -101,7 +103,15 @@ export async function POST(request: NextRequest) {
           pageSpeedData?.lighthouseResult?.audits?.['final-screenshot']?.details?.data;
 
         if (screenshot) {
-          return NextResponse.json({ screenshotUrl: screenshot, favicon, source: 'pagespeed' });
+          // Warn if base64 is too large (> 1MB when encoded)
+          const isLarge = screenshot.length > 1_000_000;
+          return NextResponse.json({
+            screenshotUrl: screenshot,
+            favicon,
+            source: 'pagespeed',
+            isBase64: true,
+            warning: isLarge ? 'Screenshot is large and may cause upload issues' : undefined,
+          });
         }
       }
     } catch (e) {

@@ -325,6 +325,22 @@ export default function GeneratePage() {
     setIsPublishing(true);
 
     try {
+      // Check if screenshot is base64 and potentially too large
+      const isBase64 = item.screenshotUrl?.startsWith('data:');
+      const payloadSize = item.screenshotUrl?.length || 0;
+
+      // Vercel limit is ~4.5MB, warn if close
+      if (isBase64 && payloadSize > 4_000_000) {
+        setBatchItems(prev => prev.map((it, idx) =>
+          idx === currentBatchIndex ? {
+            ...it,
+            status: 'error',
+            error: 'Screenshot trop volumineux. Essayez avec une URL externe.',
+          } : it
+        ));
+        return;
+      }
+
       const response = await fetch('/api/notion/create-vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -337,11 +353,26 @@ export default function GeneratePage() {
           presenceColor: item.presenceColor,
         }),
       });
+
+      // Handle non-JSON responses (e.g., "Request Entity Too Large")
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        const text = await response.text();
+        setBatchItems(prev => prev.map((it, idx) =>
+          idx === currentBatchIndex ? {
+            ...it,
+            status: 'error',
+            error: text.includes('Too Large') ? 'Screenshot trop volumineux' : `Erreur serveur: ${text.slice(0, 100)}`,
+          } : it
+        ));
+        return;
+      }
+
       const data = await response.json();
 
       if (!response.ok || data.error) {
         setBatchItems(prev => prev.map((it, idx) =>
-          idx === currentBatchIndex ? { ...it, status: 'error', error: data.error } : it
+          idx === currentBatchIndex ? { ...it, status: 'error', error: data.error || 'Erreur inconnue' } : it
         ));
       } else {
         setBatchItems(prev => prev.map((it, idx) =>
@@ -361,11 +392,14 @@ export default function GeneratePage() {
         }
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      // Check for JSON parsing errors (usually means server returned non-JSON)
+      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('Unexpected token');
       setBatchItems(prev => prev.map((it, idx) =>
         idx === currentBatchIndex ? {
           ...it,
           status: 'error',
-          error: err instanceof Error ? err.message : 'Erreur inconnue',
+          error: isJsonError ? 'Screenshot trop volumineux ou erreur serveur' : errorMessage,
         } : it
       ));
     } finally {
