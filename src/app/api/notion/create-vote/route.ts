@@ -258,6 +258,9 @@ export async function POST(request: NextRequest) {
       resultRowId = existingQuery.results[0].id;
       console.log('[create-vote] Updating existing client:', clientName);
 
+      const voteUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://widget-vote-app.vercel.app'}/vote/${clientSlug}`;
+      const clientUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+
       // Get current vote values for archive
       const existingRow = existingQuery.results[0];
       if ('properties' in existingRow) {
@@ -274,45 +277,53 @@ export async function POST(request: NextRequest) {
         const currentThird = getTextValue(props[labels.resultRankCols[2]]);
         const currentComment = getTextValue(props[labels.resultComment]);
 
-        // Only archive if there were existing votes
+        // Build archive entry if there were existing votes
+        let newComment = currentComment;
         if (currentFirst || currentSecond || currentThird) {
           const archiveEntry = formatArchiveEntry({
             first: currentFirst,
             second: currentSecond,
             third: currentThird,
           });
-
-          const newComment = currentComment
+          newComment = currentComment
             ? `${archiveEntry}\n${currentComment}`
             : archiveEntry;
-
-          // Reset votes and add archive to comment
-          await notion.pages.update({
-            page_id: resultRowId,
-            properties: {
-              [labels.resultRankCols[0]]: {
-                type: 'rich_text',
-                rich_text: [],
-              },
-              [labels.resultRankCols[1]]: {
-                type: 'rich_text',
-                rich_text: [],
-              },
-              [labels.resultRankCols[2]]: {
-                type: 'rich_text',
-                rich_text: [],
-              },
-              [labels.resultComment]: {
-                type: 'rich_text',
-                rich_text: [{ type: 'text', text: { content: newComment } }],
-              },
-              [labels.resultDate]: {
-                type: 'date',
-                date: null,
-              },
-            } as Parameters<Client['pages']['update']>[0]['properties'],
-          });
         }
+
+        // Reset votes, update links, and add archive to comment
+        await notion.pages.update({
+          page_id: resultRowId,
+          properties: {
+            [labels.resultVoteLink]: {
+              type: 'url',
+              url: voteUrl,
+            },
+            [labels.resultClientLink]: {
+              type: 'url',
+              url: clientUrl,
+            },
+            [labels.resultRankCols[0]]: {
+              type: 'rich_text',
+              rich_text: [],
+            },
+            [labels.resultRankCols[1]]: {
+              type: 'rich_text',
+              rich_text: [],
+            },
+            [labels.resultRankCols[2]]: {
+              type: 'rich_text',
+              rich_text: [],
+            },
+            [labels.resultComment]: {
+              type: 'rich_text',
+              rich_text: newComment ? [{ type: 'text', text: { content: newComment } }] : [],
+            },
+            [labels.resultDate]: {
+              type: 'date',
+              date: null,
+            },
+          } as Parameters<Client['pages']['update']>[0]['properties'],
+        });
       }
 
       // Find existing client page to update
@@ -339,39 +350,26 @@ export async function POST(request: NextRequest) {
       } while (!existingPageId && cursor);
 
     } else {
-      // Create new row in Results DB
+      // Create new row in Client Votes DB
       const voteUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://widget-vote-app.vercel.app'}/vote/${clientSlug}`;
-
-      // Check which properties exist in the database
-      const dbProperties = 'properties' in clientVotesDb ? clientVotesDb.properties as Record<string, unknown> : {};
-      const hasVoteLinkProperty = labels.resultVoteLink in dbProperties;
-      const hasClientLinkProperty = labels.resultClientLink in dbProperties;
-
-      const newRowProperties: Record<string, unknown> = {
-        Client: {
-          type: 'title',
-          title: [{ type: 'text', text: { content: clientName } }],
-        },
-      };
-
-      if (hasVoteLinkProperty) {
-        newRowProperties[labels.resultVoteLink] = {
-          type: 'url',
-          url: voteUrl,
-        };
-      }
-
-      if (hasClientLinkProperty) {
-        const clientUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
-        newRowProperties[labels.resultClientLink] = {
-          type: 'url',
-          url: clientUrl,
-        };
-      }
+      const clientUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
 
       const newRow = await notion.pages.create({
         parent: { type: 'database_id', database_id: clientVotesDbId },
-        properties: newRowProperties as Parameters<Client['pages']['create']>[0]['properties'],
+        properties: {
+          Client: {
+            type: 'title',
+            title: [{ type: 'text', text: { content: clientName } }],
+          },
+          [labels.resultVoteLink]: {
+            type: 'url',
+            url: voteUrl,
+          },
+          [labels.resultClientLink]: {
+            type: 'url',
+            url: clientUrl,
+          },
+        } as Parameters<Client['pages']['create']>[0]['properties'],
       });
       resultRowId = newRow.id;
     }
