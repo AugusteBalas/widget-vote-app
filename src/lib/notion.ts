@@ -114,17 +114,19 @@ export async function getVoteData(pageIdOrSlug: string): Promise<GetVoteResult> 
     // 2. Find child database and colors by listing blocks
     const blocks = await notion.blocks.children.list({ block_id: pageId, page_size: 20 });
 
-    // Extract colors from code block if present
+    // Extract colors and language from code block if present
     let buttonColor: string | undefined;
     let presenceColor: string | undefined;
+    let storedLang: Lang | undefined;
     for (const block of blocks.results) {
       if ('type' in block && block.type === 'code') {
         const codeBlock = block as { code: { rich_text: Array<{ plain_text: string }> } };
         const codeContent = codeBlock.code.rich_text.map(t => t.plain_text).join('');
         try {
-          const colors = JSON.parse(codeContent);
-          if (colors.buttonColor) buttonColor = colors.buttonColor;
-          if (colors.presenceColor) presenceColor = colors.presenceColor;
+          const config = JSON.parse(codeContent);
+          if (config.buttonColor) buttonColor = config.buttonColor;
+          if (config.presenceColor) presenceColor = config.presenceColor;
+          if (config.lang && ['fr', 'en', 'es'].includes(config.lang)) storedLang = config.lang;
         } catch {
           // Not a valid JSON, ignore
         }
@@ -148,21 +150,25 @@ export async function getVoteData(pageIdOrSlug: string): Promise<GetVoteResult> 
 
     const dataSourceId = db.data_sources[0].id;
 
-    // Detect language from property names
-    let lang: Lang = 'fr';
-    if ('properties' in db && db.properties && typeof db.properties === 'object') {
-      const propNames = Object.keys(db.properties as Record<string, unknown>);
-      if (propNames.includes('Ranking')) lang = 'en';
-      else if (propNames.includes('Clasificación')) lang = 'es';
-    }
+    // Use stored language from code block, fallback to French (since DB columns are always French now)
+    const lang: Lang = storedLang || 'fr';
 
-    // Property name mapping based on detected language
+    // Property names are always French in the DB, but we return localized labels for the UI
     const labelMap: Record<Lang, { ranking: string; description: string; recommended: string; image: string; comment: string }> = {
-      fr: { ranking: 'Classement', description: 'Description', recommended: 'Recommandé', image: 'Image', comment: 'Commentaire' },
-      en: { ranking: 'Ranking', description: 'Description', recommended: 'Recommended', image: 'Image', comment: 'Comment' },
-      es: { ranking: 'Clasificación', description: 'Descripción', recommended: 'Recomendado', image: 'Imagen', comment: 'Comentario' },
+      fr: { ranking: '1er choix', description: 'Description', recommended: 'Recommandé', image: 'Image', comment: 'Commentaire' },
+      en: { ranking: '1st choice', description: 'Description', recommended: 'Recommended', image: 'Image', comment: 'Comment' },
+      es: { ranking: '1ª opción', description: 'Descripción', recommended: 'Recomendado', image: 'Imagen', comment: 'Comentario' },
     };
     const labels = labelMap[lang];
+
+    // Fixed French column names for reading from DB
+    const DB_COLS = {
+      ranking: 'Classement',
+      description: 'Description',
+      recommended: 'Recommandé',
+      image: 'Image',
+      comment: 'Commentaire',
+    };
 
     // 4. Query all rows from the database
     const queryResult = await notion.dataSources.query({ data_source_id: dataSourceId, page_size: 10 });
@@ -180,19 +186,19 @@ export async function getVoteData(pageIdOrSlug: string): Promise<GetVoteResult> 
           ? (titleProp.title as Array<{ plain_text: string }>).map((t) => t.plain_text).join('')
           : '';
 
-        // Description
-        const descProp = props[labels.description];
+        // Description - use fixed French column names
+        const descProp = props[DB_COLS.description];
         const description = descProp && 'rich_text' in descProp
           ? (descProp.rich_text as Array<{ plain_text: string }>).map((t) => t.plain_text).join('')
           : '';
 
         // Recommended
-        const recProp = props[labels.recommended];
+        const recProp = props[DB_COLS.recommended];
         const recommended = recProp && 'checkbox' in recProp ? !!recProp.checkbox : false;
 
         // Image URL (Notion file)
         let imageUrl = '';
-        const imgProp = props[labels.image];
+        const imgProp = props[DB_COLS.image];
         if (imgProp && 'files' in imgProp) {
           const files = imgProp.files as Array<{ type: string; file?: { url: string }; external?: { url: string } }>;
           if (files.length > 0) {
@@ -203,13 +209,13 @@ export async function getVoteData(pageIdOrSlug: string): Promise<GetVoteResult> 
         }
 
         // Current ranking
-        const rankProp = props[labels.ranking];
+        const rankProp = props[DB_COLS.ranking];
         const ranking = rankProp && 'select' in rankProp && rankProp.select
           ? (rankProp.select as { name: string }).name
           : null;
 
         // Current comment
-        const commentProp = props[labels.comment];
+        const commentProp = props[DB_COLS.comment];
         const comment = commentProp && 'rich_text' in commentProp
           ? (commentProp.rich_text as Array<{ plain_text: string }>).map((t) => t.plain_text).join('')
           : '';

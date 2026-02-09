@@ -417,7 +417,7 @@ export async function POST(request: NextRequest) {
             code: {
               language: 'json',
               rich_text: [
-                { type: 'text', text: { content: JSON.stringify({ buttonColor, presenceColor }) } },
+                { type: 'text', text: { content: JSON.stringify({ buttonColor, presenceColor, lang }) } },
               ],
             },
           });
@@ -517,7 +517,7 @@ export async function POST(request: NextRequest) {
             code: {
               language: 'json',
               rich_text: [
-                { type: 'text', text: { content: JSON.stringify({ buttonColor, presenceColor }) } },
+                { type: 'text', text: { content: JSON.stringify({ buttonColor, presenceColor, lang }) } },
               ],
             },
           },
