@@ -156,32 +156,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Method 2: Microlink with styles parameter (injects CSS directly)
-    try {
-      const hideCookieStyles = [
-        '[class*="cookie"],[class*="Cookie"],[id*="cookie"],[id*="Cookie"]',
-        '[class*="consent"],[class*="Consent"],[id*="consent"],[id*="Consent"]',
-        '[class*="axeptio"],[class*="Axeptio"],[id*="axeptio"]',
-        '[class*="gdpr"],[class*="GDPR"],[id*="gdpr"]',
-        '.cc-window,#onetrust-banner-sdk,#CybotCookiebotDialog',
-        '[class*="tarteaucitron"],[id*="tarteaucitron"]',
-        '[class*="didomi"],[id*="didomi"]',
-      ].join(',') + '{display:none!important;visibility:hidden!important;opacity:0!important;}';
+    // Method 2: ScreenshotOne API (has native cookie banner blocking)
+    // Free tier: 100 screenshots/month - https://screenshotone.com
+    const screenshotOneKey = process.env.SCREENSHOTONE_API_KEY;
+    if (screenshotOneKey) {
+      try {
+        const screenshotOneParams = new URLSearchParams({
+          url: validUrl.toString(),
+          viewport_width: '1280',
+          viewport_height: '720',
+          format: 'png',
+          block_cookie_banners: 'true',
+          block_ads: 'true',
+          delay: '2',
+          access_key: screenshotOneKey,
+        });
 
+        const screenshotOneUrl = `https://api.screenshotone.com/take?${screenshotOneParams.toString()}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        const response = await fetch(screenshotOneUrl, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          // Returns image directly, convert to base64
+          const buffer = await response.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          return NextResponse.json({
+            screenshotUrl: `data:image/png;base64,${base64}`,
+            favicon,
+            source: 'screenshotone',
+          });
+        }
+      } catch (e) {
+        console.log('ScreenshotOne failed:', e instanceof Error ? e.message : e);
+      }
+    }
+
+    // Method 3: Microlink (basic, no cookie blocking on free tier)
+    try {
       const microlinkParams = new URLSearchParams({
         url: validUrl.toString(),
         screenshot: 'true',
         meta: 'false',
         'viewport.width': '1280',
         'viewport.height': '720',
-        styles: hideCookieStyles,
-        waitForTimeout: '3000',
       });
 
       const microlinkUrl = `https://api.microlink.io/?${microlinkParams.toString()}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const microlinkResponse = await fetch(microlinkUrl, {
         headers: { Accept: 'application/json' },
@@ -201,37 +230,7 @@ export async function POST(request: NextRequest) {
       console.log('Microlink failed:', e instanceof Error ? e.message : e);
     }
 
-    // Method 3: urlbox.io free tier (has native cookie banner hiding)
-    try {
-      const urlboxParams = new URLSearchParams({
-        url: validUrl.toString(),
-        width: '1280',
-        height: '720',
-        hide_cookie_banners: 'true',
-        block_ads: 'true',
-        format: 'png',
-      });
-
-      // urlbox free tier - no API key needed for basic screenshots
-      const urlboxUrl = `https://api.urlbox.io/v1/render?${urlboxParams.toString()}`;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      const urlboxResponse = await fetch(urlboxUrl, {
-        method: 'HEAD',
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (urlboxResponse.ok) {
-        return NextResponse.json({ screenshotUrl: urlboxUrl, favicon, source: 'urlbox' });
-      }
-    } catch (e) {
-      console.log('Urlbox failed:', e instanceof Error ? e.message : e);
-    }
-
-    // Method 4: Thum.io (simple, free, reliable)
+    // Method 5: Thum.io (simple, free, reliable)
     try {
       const thumioUrl = `https://image.thum.io/get/width/1280/crop/720/noanimate/${validUrl.toString()}`;
 
@@ -251,7 +250,7 @@ export async function POST(request: NextRequest) {
       console.log('Thum.io failed:', e instanceof Error ? e.message : e);
     }
 
-    // Method 5: Google PageSpeed API (free, but slower)
+    // Method 6: Google PageSpeed API (free, but slower)
     try {
       const pageSpeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
         validUrl.toString()
