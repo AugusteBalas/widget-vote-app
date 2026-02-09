@@ -1,5 +1,6 @@
 import VoteForm from './VoteForm';
 import ViaSayLogo from '@/components/ViaSayLogo';
+import { getVoteData } from '@/lib/notion';
 
 interface VotePageProps {
   params: Promise<{ pageId: string }>;
@@ -8,29 +9,22 @@ interface VotePageProps {
 export default async function VotePage({ params }: VotePageProps) {
   const { pageId } = await params;
 
-  // Determine base URL for API calls
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  // Call Notion directly instead of going through API route
+  const result = await getVoteData(pageId);
 
-  const res = await fetch(`${baseUrl}/api/notion/get-vote?pageId=${encodeURIComponent(pageId)}`, {
-    cache: 'no-store',
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
+  if (result.error || !result.data) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-6">
         <div className="text-center space-y-4">
           <div className="text-6xl">😵</div>
           <h1 className="text-2xl font-bold text-slate-800">Page introuvable</h1>
-          <p className="text-slate-500">{data.error || 'Cette page de vote n\'existe pas ou a été supprimée.'}</p>
+          <p className="text-slate-500">{result.error || 'Cette page de vote n\'existe pas ou a été supprimée.'}</p>
         </div>
       </main>
     );
   }
 
-  const data = await res.json();
+  const data = result.data;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 text-slate-900">

@@ -29,6 +29,8 @@ interface VoteData {
   designs: Design[];
   hasVoted: boolean;
   resultRowId?: string;
+  buttonColor?: string;
+  presenceColor?: string;
 }
 
 const UI_TEXT = {
@@ -108,6 +110,15 @@ const LETTER_TO_CONCEPT: Record<string, 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2'
   A: 'B', B: 'B2', C: 'D', D: 'D2', E: 'OLD', F: 'OLD2',
 };
 
+// Order of options (A through F)
+const OPTION_ORDER = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+// Extract letter from title (e.g., "Option A - ..." -> "A")
+function extractLetter(title: string): string | null {
+  const match = title.match(/^Option ([A-F])\b/);
+  return match ? match[1] : null;
+}
+
 // Map design titles to concept IDs for WidgetButton
 // Supports both old format ("Option B - ...") and new format ("Option A - ...")
 function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD2' | null {
@@ -124,19 +135,32 @@ function extractConceptId(title: string): 'B' | 'B2' | 'D' | 'D2' | 'OLD' | 'OLD
   return match ? (match[1] as 'B' | 'B2' | 'D' | 'D2') : null;
 }
 
+// Sort designs by option letter (A, B, C, D, E, F)
+function sortDesignsByLetter(designs: Design[]): Design[] {
+  return [...designs].sort((a, b) => {
+    const letterA = extractLetter(a.title) || 'Z';
+    const letterB = extractLetter(b.title) || 'Z';
+    return OPTION_ORDER.indexOf(letterA) - OPTION_ORDER.indexOf(letterB);
+  });
+}
+
 export default function VoteForm({ data, clientPageId }: { data: VoteData; clientPageId: string }) {
   const t = UI_TEXT[data.lang] || UI_TEXT.fr;
 
-  const [buttonColor, setButtonColor] = useState(DEFAULT_BUTTON_COLOR);
+  // Sort designs by option letter (A, B, C, D, E, F)
+  const sortedDesigns = sortDesignsByLetter(data.designs);
+
+  // Use stored color from Notion if available, otherwise use default
+  const [buttonColor, setButtonColor] = useState(data.buttonColor || DEFAULT_BUTTON_COLOR);
   const [rankings, setRankings] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    for (const design of data.designs) {
+    for (const design of sortedDesigns) {
       if (design.ranking) initial[design.pageId] = design.ranking;
     }
     return initial;
   });
   const [comment, setComment] = useState(() => {
-    const firstChoice = data.designs.find(d => d.ranking?.includes('1'));
+    const firstChoice = sortedDesigns.find(d => d.ranking?.includes('1'));
     return firstChoice?.comment || '';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -251,7 +275,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
 
         {/* Widget concepts overview */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-          {data.designs.map((design) => {
+          {sortedDesigns.map((design) => {
             const conceptId = extractConceptId(design.title);
             const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
             const isCurrent = conceptId ? isCurrentWidget(conceptId) : false;
@@ -343,7 +367,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
 
           {/* Preview grid with Notion images */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.designs.map((design) => {
+            {sortedDesigns.map((design) => {
               const conceptId = extractConceptId(design.title);
               const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
               const isCurrent = conceptId ? isCurrentWidget(conceptId) : false;
@@ -426,7 +450,7 @@ export default function VoteForm({ data, clientPageId }: { data: VoteData; clien
 
           {/* Design vote cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            {data.designs.map((design) => {
+            {sortedDesigns.map((design) => {
               const currentRank = rankings[design.pageId] || '';
               const conceptId = extractConceptId(design.title);
               const letter = conceptId ? CONCEPT_LETTER[conceptId] : null;
