@@ -26,6 +26,17 @@ const CLIENT_VOTES_COLS = {
   date: 'Date',
 };
 
+// Fixed column names for Designs DB (always use French since pages can be updated with different languages)
+const DESIGNS_DB_COLS = {
+  ranking: 'Classement',
+  rankOptions: ['1er choix', '2e choix', '3e choix'],
+  description: 'Description',
+  recommended: 'Recommandé',
+  image: 'Image',
+  comment: 'Commentaire',
+  dbTitle: 'Designs proposés',
+};
+
 const LABELS: Record<Lang, {
   ranking: string;
   rankOptions: string[];
@@ -433,18 +444,19 @@ export async function POST(request: NextRequest) {
       const dataSourceId = db.data_sources[0].id;
 
       // Query existing rows and reset votes + update images
+      // Use fixed French column names for Designs DB
       const queryResult = await notion.dataSources.query({ data_source_id: dataSourceId, page_size: 10 });
 
       for (const row of queryResult.results) {
         if ('properties' in row) {
           const updateProps: Record<string, unknown> = {
             // Reset ranking
-            [labels.ranking]: {
+            [DESIGNS_DB_COLS.ranking]: {
               type: 'select',
               select: null,
             },
             // Reset comment
-            [labels.comment]: {
+            [DESIGNS_DB_COLS.comment]: {
               type: 'rich_text',
               rich_text: [],
             },
@@ -452,7 +464,7 @@ export async function POST(request: NextRequest) {
 
           // Update image
           if (screenshotFileId) {
-            updateProps[labels.image] = {
+            updateProps[DESIGNS_DB_COLS.image] = {
               type: 'files',
               files: [{
                 type: 'file_upload',
@@ -461,7 +473,7 @@ export async function POST(request: NextRequest) {
               }],
             };
           } else if (!screenshotUrl.startsWith('data:')) {
-            updateProps[labels.image] = {
+            updateProps[DESIGNS_DB_COLS.image] = {
               type: 'files',
               files: [{
                 type: 'external',
@@ -514,28 +526,28 @@ export async function POST(request: NextRequest) {
 
       clientPageId = clientPage.id;
 
-      // Create database
+      // Create database - always use French column names for consistency
       const db = await notion.databases.create({
         parent: { type: 'page_id', page_id: clientPageId },
-        title: [{ type: 'text', text: { content: labels.dbTitle } }],
+        title: [{ type: 'text', text: { content: DESIGNS_DB_COLS.dbTitle } }],
         is_inline: true,
         icon: { type: 'emoji', emoji: '🗳️' },
         initial_data_source: {
           properties: {
             Design: { type: 'title', title: {} },
-            [labels.image]: { type: 'files', files: {} },
-            [labels.description]: { type: 'rich_text', rich_text: {} },
-            [labels.recommended]: { type: 'checkbox', checkbox: {} },
-            [labels.ranking]: {
+            [DESIGNS_DB_COLS.image]: { type: 'files', files: {} },
+            [DESIGNS_DB_COLS.description]: { type: 'rich_text', rich_text: {} },
+            [DESIGNS_DB_COLS.recommended]: { type: 'checkbox', checkbox: {} },
+            [DESIGNS_DB_COLS.ranking]: {
               type: 'select',
               select: {
-                options: labels.rankOptions.map((name, i) => ({
+                options: DESIGNS_DB_COLS.rankOptions.map((name, i) => ({
                   name,
                   color: (['green', 'blue', 'yellow'] as const)[i],
                 })),
               },
             },
-            [labels.comment]: { type: 'rich_text', rich_text: {} },
+            [DESIGNS_DB_COLS.comment]: { type: 'rich_text', rich_text: {} },
           },
         },
       });
@@ -558,18 +570,18 @@ export async function POST(request: NextRequest) {
             type: 'title',
             title: [{ type: 'text', text: { content: designName } }],
           },
-          [labels.description]: {
+          [DESIGNS_DB_COLS.description]: {
             type: 'rich_text',
             rich_text: [{ type: 'text', text: { content: meta.description[lang] } }],
           },
-          [labels.recommended]: {
+          [DESIGNS_DB_COLS.recommended]: {
             type: 'checkbox',
             checkbox: !!meta.recommended,
           },
         };
 
         if (screenshotFileId) {
-          properties[labels.image] = {
+          properties[DESIGNS_DB_COLS.image] = {
             type: 'files',
             files: [{
               type: 'file_upload',
@@ -578,7 +590,7 @@ export async function POST(request: NextRequest) {
             }],
           };
         } else if (!screenshotUrl.startsWith('data:')) {
-          properties[labels.image] = {
+          properties[DESIGNS_DB_COLS.image] = {
             type: 'files',
             files: [{
               type: 'external',
