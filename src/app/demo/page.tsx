@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { CONCEPTS, ConceptId, CONCEPT_LETTER, isCurrentWidget, DEFAULT_BUTTON_COLOR, DEFAULT_PRESENCE_COLOR } from '@/lib/types';
 import { extractDominantColor, getFaviconUrl } from '@/lib/colorExtractor';
 import WidgetButton from '@/components/WidgetButton';
@@ -16,6 +16,12 @@ const CONCEPT_LABELS: Record<ConceptId, { name: string; description: string }> =
 };
 
 export default function DemoPage() {
+  // Example preview state (loaded from Notion)
+  const [exampleLoaded, setExampleLoaded] = useState(false);
+  const [exampleScreenshot, setExampleScreenshot] = useState<string | null>(null);
+  const [exampleColor, setExampleColor] = useState(DEFAULT_BUTTON_COLOR);
+  const [isUsingExample, setIsUsingExample] = useState(true);
+
   // Site test state
   const [siteUrl, setSiteUrl] = useState('');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -23,6 +29,26 @@ export default function DemoPage() {
   const [siteError, setSiteError] = useState<string | null>(null);
   const [buttonColor, setButtonColor] = useState(DEFAULT_BUTTON_COLOR);
   const [presenceColor] = useState(DEFAULT_PRESENCE_COLOR);
+
+  // Load Viasay example on mount
+  useEffect(() => {
+    async function loadExample() {
+      try {
+        const response = await fetch('/api/notion/get-example');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.screenshotUrl) {
+            setExampleScreenshot(data.screenshotUrl);
+            setExampleColor(data.buttonColor || DEFAULT_BUTTON_COLOR);
+            setExampleLoaded(true);
+          }
+        }
+      } catch {
+        // Silently fail - example is optional
+      }
+    }
+    loadExample();
+  }, []);
 
   // Vote state
   const [selectedConcept, setSelectedConcept] = useState<ConceptId | null>(null);
@@ -71,6 +97,7 @@ export default function DemoPage() {
         setSiteError(data.error);
       } else if (data.screenshotUrl) {
         setScreenshotUrl(data.screenshotUrl);
+        setIsUsingExample(false); // User loaded their own site
       }
     } catch {
       setSiteError('Erreur de connexion');
@@ -250,97 +277,134 @@ export default function DemoPage() {
             <p className="mt-2 text-xs text-slate-400 text-center">Certains sites peuvent bloquer la capture automatique</p>
           </div>
 
-          {/* Preview grid */}
-          {screenshotUrl && (
-            <div className="space-y-6">
-              {/* Color picker (simple) */}
-              <div className="max-w-xs mx-auto">
-                <label className="block text-sm font-medium text-slate-600 mb-2 text-center">
-                  Couleur du bouton
-                </label>
-                <div className="flex items-center justify-center gap-2">
-                  <div className="relative w-10 h-10">
-                    <div
-                      className="absolute inset-0 rounded-lg border-2 border-slate-300 pointer-events-none"
-                      style={{ backgroundColor: buttonColor }}
-                    />
-                    <input
-                      type="color"
-                      value={buttonColor}
-                      onChange={(e) => setButtonColor(e.target.value)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    value={buttonColor}
-                    onChange={(e) => setButtonColor(e.target.value)}
-                    className="w-24 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-700 text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
+          {/* Preview grid - show example by default or user's site */}
+          {(() => {
+            const currentScreenshot = isUsingExample ? exampleScreenshot : screenshotUrl;
+            const currentColor = isUsingExample ? exampleColor : buttonColor;
+            const showPreview = currentScreenshot || isLoadingSite;
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {CONCEPTS.map((concept) => {
-                  const letter = CONCEPT_LETTER[concept.id];
-                  const isCurrent = isCurrentWidget(concept.id);
-                  return (
-                  <div key={concept.id} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
-                        Option {letter}
-                      </span>
-                      {isCurrent && (
-                        <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
-                      )}
-                    </div>
-                    <div className={`relative aspect-video bg-white rounded-xl overflow-hidden border shadow-sm ${isCurrent ? 'border-slate-300 border-dashed' : 'border-slate-200'}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={screenshotUrl}
-                        alt={`Preview ${concept.id}`}
-                        className="w-full h-full object-cover object-top"
-                      />
-                      <div className="absolute bottom-2 right-2">
-                        <WidgetButton
-                          concept={concept.id}
-                          buttonColor={isCurrent ? '#636480' : buttonColor}
-                          presenceColor={presenceColor}
-                          size={36}
+            if (!showPreview && !exampleLoaded) {
+              // Loading state for example
+              return (
+                <div className="text-center py-12">
+                  <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-slate-400">Chargement de l&apos;exemple...</p>
+                </div>
+              );
+            }
+
+            if (!showPreview) {
+              // No example available and no user site
+              return (
+                <div className="text-center py-12 text-slate-400">
+                  <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <p>Entrez une URL ci-dessus pour voir les previews</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-6">
+                {/* Example banner */}
+                {isUsingExample && exampleScreenshot && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 text-center">
+                    <p className="text-blue-800 font-medium mb-1">
+                      Exemple : ViaSay.io
+                    </p>
+                    <p className="text-blue-600 text-sm">
+                      Voici à quoi ressemblent les widgets sur un site réel. Testez avec votre propre site ci-dessus !
+                    </p>
+                  </div>
+                )}
+
+                {/* Color picker (only for user's site) */}
+                {!isUsingExample && (
+                  <div className="max-w-xs mx-auto">
+                    <label className="block text-sm font-medium text-slate-600 mb-2 text-center">
+                      Couleur du bouton
+                    </label>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="relative w-10 h-10">
+                        <div
+                          className="absolute inset-0 rounded-lg border-2 border-slate-300 pointer-events-none"
+                          style={{ backgroundColor: buttonColor }}
+                        />
+                        <input
+                          type="color"
+                          value={buttonColor}
+                          onChange={(e) => setButtonColor(e.target.value)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
                       </div>
-                      <div className={`absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/50'}`}>
-                        {letter}
-                      </div>
+                      <input
+                        type="text"
+                        value={buttonColor}
+                        onChange={(e) => setButtonColor(e.target.value)}
+                        className="w-24 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-700 text-sm font-mono text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
                   </div>
-                  );
-                })}
-              </div>
+                )}
 
-              <div className="text-center">
-                <button
-                  onClick={() => scrollTo(voteSectionRef)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  Votez pour votre préféré
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {CONCEPTS.map((concept) => {
+                    const letter = CONCEPT_LETTER[concept.id];
+                    const isCurrent = isCurrentWidget(concept.id);
+                    return (
+                    <div key={concept.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${isCurrent ? 'text-slate-400' : 'text-slate-700'}`}>
+                          Option {letter}
+                        </span>
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-medium rounded">actuel</span>
+                        )}
+                      </div>
+                      <div className={`relative aspect-video bg-white rounded-xl overflow-hidden border shadow-sm ${isCurrent ? 'border-slate-300 border-dashed' : 'border-slate-200'}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={currentScreenshot || ''}
+                          alt={`Preview ${concept.id}`}
+                          className="w-full h-full object-cover object-top"
+                        />
+                        <div className="absolute bottom-2 right-2">
+                          <WidgetButton
+                            concept={concept.id}
+                            buttonColor={isCurrent ? '#636480' : currentColor}
+                            presenceColor={presenceColor}
+                            size={36}
+                          />
+                        </div>
+                        <div className={`absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm rounded text-xs font-bold text-white ${isCurrent ? 'bg-slate-500/60' : 'bg-black/50'}`}>
+                          {letter}
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
 
-          {/* Empty state */}
-          {!screenshotUrl && !isLoadingSite && (
-            <div className="text-center py-12 text-slate-400">
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <p>Entrez une URL ci-dessus pour voir les previews</p>
-            </div>
-          )}
+                <div className="text-center space-y-3">
+                  {isUsingExample && (
+                    <p className="text-sm text-slate-500">
+                      Entrez votre URL ci-dessus pour personnaliser la preview
+                    </p>
+                  )}
+                  <button
+                    onClick={() => scrollTo(voteSectionRef)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                  >
+                    Votez pour votre préféré
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 
