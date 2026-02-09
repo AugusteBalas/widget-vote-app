@@ -17,6 +17,15 @@ interface RequestBody {
 // Titles for the client votes DB (separate from community/demo "Résultats")
 const CLIENT_VOTES_DB_TITLES = ['Votes Clients', 'Client Votes', 'Votos Clientes'];
 
+// Fixed column names for Client Votes DB (always use French since it's shared)
+const CLIENT_VOTES_COLS = {
+  voteLink: 'Lien vote',
+  clientLink: 'Lien client',
+  rankCols: ['1er choix', '2e choix', '3e choix'],
+  comment: 'Commentaire',
+  date: 'Date',
+};
+
 const LABELS: Record<Lang, {
   ranking: string;
   rankOptions: string[];
@@ -211,21 +220,22 @@ export async function POST(request: NextRequest) {
 
     if (!clientVotesDbId) {
       // Create Client Votes DB with structure: Client, Lien vote, Lien client, 1er/2e/3e choix, Commentaire, Date
+      // Always use French column names since this DB is shared across all languages
       const clientVotesDb = await notion.databases.create({
         parent: { type: 'page_id', page_id: VOTE_WIDGET_PAGE_ID },
-        title: [{ type: 'text', text: { content: labels.clientVotesDbTitle } }],
+        title: [{ type: 'text', text: { content: 'Votes Clients' } }],
         is_inline: true,
         icon: { type: 'emoji', emoji: '🗳️' },
         initial_data_source: {
           properties: {
             Client: { type: 'title', title: {} },
-            [labels.resultVoteLink]: { type: 'url', url: {} },
-            [labels.resultClientLink]: { type: 'url', url: {} },
-            [labels.resultRankCols[0]]: { type: 'rich_text', rich_text: {} },
-            [labels.resultRankCols[1]]: { type: 'rich_text', rich_text: {} },
-            [labels.resultRankCols[2]]: { type: 'rich_text', rich_text: {} },
-            [labels.resultComment]: { type: 'rich_text', rich_text: {} },
-            [labels.resultDate]: { type: 'date', date: {} },
+            [CLIENT_VOTES_COLS.voteLink]: { type: 'url', url: {} },
+            [CLIENT_VOTES_COLS.clientLink]: { type: 'url', url: {} },
+            [CLIENT_VOTES_COLS.rankCols[0]]: { type: 'rich_text', rich_text: {} },
+            [CLIENT_VOTES_COLS.rankCols[1]]: { type: 'rich_text', rich_text: {} },
+            [CLIENT_VOTES_COLS.rankCols[2]]: { type: 'rich_text', rich_text: {} },
+            [CLIENT_VOTES_COLS.comment]: { type: 'rich_text', rich_text: {} },
+            [CLIENT_VOTES_COLS.date]: { type: 'date', date: {} },
           },
         },
       });
@@ -272,10 +282,11 @@ export async function POST(request: NextRequest) {
           return rt.map(t => t.plain_text).join('');
         };
 
-        const currentFirst = getTextValue(props[labels.resultRankCols[0]]);
-        const currentSecond = getTextValue(props[labels.resultRankCols[1]]);
-        const currentThird = getTextValue(props[labels.resultRankCols[2]]);
-        const currentComment = getTextValue(props[labels.resultComment]);
+        // Use fixed French column names for Client Votes DB
+        const currentFirst = getTextValue(props[CLIENT_VOTES_COLS.rankCols[0]]);
+        const currentSecond = getTextValue(props[CLIENT_VOTES_COLS.rankCols[1]]);
+        const currentThird = getTextValue(props[CLIENT_VOTES_COLS.rankCols[2]]);
+        const currentComment = getTextValue(props[CLIENT_VOTES_COLS.comment]);
 
         // Build archive entry if there were existing votes
         let newComment = currentComment;
@@ -291,34 +302,35 @@ export async function POST(request: NextRequest) {
         }
 
         // Reset votes, update links, and add archive to comment
+        // Use fixed French column names for Client Votes DB
         await notion.pages.update({
           page_id: resultRowId,
           properties: {
-            [labels.resultVoteLink]: {
+            [CLIENT_VOTES_COLS.voteLink]: {
               type: 'url',
               url: voteUrl,
             },
-            [labels.resultClientLink]: {
+            [CLIENT_VOTES_COLS.clientLink]: {
               type: 'url',
               url: clientUrl,
             },
-            [labels.resultRankCols[0]]: {
+            [CLIENT_VOTES_COLS.rankCols[0]]: {
               type: 'rich_text',
               rich_text: [],
             },
-            [labels.resultRankCols[1]]: {
+            [CLIENT_VOTES_COLS.rankCols[1]]: {
               type: 'rich_text',
               rich_text: [],
             },
-            [labels.resultRankCols[2]]: {
+            [CLIENT_VOTES_COLS.rankCols[2]]: {
               type: 'rich_text',
               rich_text: [],
             },
-            [labels.resultComment]: {
+            [CLIENT_VOTES_COLS.comment]: {
               type: 'rich_text',
               rich_text: newComment ? [{ type: 'text', text: { content: newComment } }] : [],
             },
-            [labels.resultDate]: {
+            [CLIENT_VOTES_COLS.date]: {
               type: 'date',
               date: null,
             },
@@ -351,6 +363,7 @@ export async function POST(request: NextRequest) {
 
     } else {
       // Create new row in Client Votes DB
+      // Use fixed French column names for Client Votes DB
       const voteUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://widget-vote-app.vercel.app'}/vote/${clientSlug}`;
       const clientUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
 
@@ -361,11 +374,11 @@ export async function POST(request: NextRequest) {
             type: 'title',
             title: [{ type: 'text', text: { content: clientName } }],
           },
-          [labels.resultVoteLink]: {
+          [CLIENT_VOTES_COLS.voteLink]: {
             type: 'url',
             url: voteUrl,
           },
-          [labels.resultClientLink]: {
+          [CLIENT_VOTES_COLS.clientLink]: {
             type: 'url',
             url: clientUrl,
           },
